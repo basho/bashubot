@@ -17,7 +17,7 @@ yeahs = [
   ]
 
 Array.prototype.random = () ->
-  scaled = Math.floor(Math.random() * @length))
+  scaled = Math.floor(Math.random() * @length)
   @[scaled]
 
 mug = (msg) ->
