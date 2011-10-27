@@ -16,18 +16,13 @@ yeahs = [
   "Yeahhh, I'm gonna have to go ahead and ask you to come in on Saturday."
   ]
 
-Array.prototype.random = () ->
-  scaled = Math.floor(Math.random() * @length)
-  @[scaled]
-
 mug = (msg) ->
-  greeting = greetings.random()
-  msg.send "Hey #{msg.user.name}, #{greeting}"
+  msg.send "Hey #{msg.message.user.name}, #{msg.random greetings}"
   lumberg(msg)
 
 lumberg = (msg) ->
   if Math.random() > 0.8
-    msg.send lumbergs.random()
+    msg.send msg.random(lumbergs)
 
 module.exports = (robot) ->
   robot.respond /mug( me)?/i, (msg) ->
@@ -35,11 +30,11 @@ module.exports = (robot) ->
 
   robot.hear /^\*.*mug.*\*$/i, (msg) ->
     lumberg(msg)
-    msg.send "*sips* *raises mug toward #{msg.user.name}*"
+    msg.send "*sips* *raises mug toward #{msg.message.user.name}*"
 
   robot.hear /lumberg/i, (msg) ->
     lumberg(msg)
-    msg.send("Hey #{msg.user.name}, #{greetings.random()} #{yeahs.random()}")
+    msg.send("Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
 
   robot.hear /has entered the room/i, (msg) ->
     mug msg
