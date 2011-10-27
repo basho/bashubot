@@ -17,12 +17,14 @@ yeahs = [
   ]
 
 mug = (msg) ->
-  msg.send "Hey #{msg.message.user.name}, #{msg.random greetings}"
-  lumberg(msg)
+  unless msg.message.user.name == msg.robot.name
+    msg.send "Hey #{msg.message.user.name}, #{msg.random greetings}"
+    lumberg(msg)
 
 lumberg = (msg) ->
-  if Math.random() > 0.8
-    msg.send msg.random(lumbergs)
+  unless msg.message.user.name == 'bashobot'
+    if Math.random() > 0.8
+      msg.send msg.random(lumbergs)
 
 module.exports = (robot) ->
   robot.respond /mug( me)?/i, (msg) ->
