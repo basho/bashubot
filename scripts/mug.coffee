@@ -12,7 +12,7 @@ greetings = [
 
 yeahs = [
   "Yeahhh, did you get the memo? See, there are these new cover sheets for your TPS report.",
-  "Yeahhh, I'm gonna have to go ahead and disagree with you.",
+  "Yeahhh, I'm gonna have to go ahead and disagree with you on that one.",
   "Yeahhh, I'm gonna have to go ahead and ask you to come in on Saturday."
   ]
 
@@ -22,13 +22,12 @@ mug = (msg) ->
     lumberg(msg)
 
 lumberg = (msg) ->
-  unless msg.message.user.name == 'bashobot'
+  unless msg.message.user.name == msg.robot.name
     if Math.random() > 0.8
       msg.send msg.random(lumbergs)
 
 module.exports = (robot) ->
-  robot.respond /mug( me)?/i, (msg) ->
-    mug msg
+  robot.respond /mug(\s+me)?/i, mug
 
   robot.hear /^\*.*mug.*\*$/i, (msg) ->
     lumberg(msg)
@@ -38,5 +37,4 @@ module.exports = (robot) ->
     lumberg(msg)
     msg.send("Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
 
-  robot.hear /has entered the room/i, (msg) ->
-    mug msg
+  robot.hear /has entered the room/i, mug
