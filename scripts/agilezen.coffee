@@ -1,5 +1,5 @@
 HTTPS = require 'https'
-_ ?= require 'underscore'
+_ = require 'underscore'
 
 apikey = process.env.AGILEZEN_APIKEY
 
@@ -24,7 +24,7 @@ makeRequest = (options, callback) ->
 
   request = HTTPS.request options, (response) ->
     if response.statusCode >= 300
-      callback "Got #{response.statusCode} code from AZ", null
+      callback "Got #{response.statusCode} code from AgileZen while trying to #{options.method} #{options.path}, sorry.", null
       return
 
     buf = ''
@@ -77,6 +77,27 @@ module.exports = (robot) ->
             msg.send err
           else
             if data.items.length > 0
-              msg.send "#{card.id} #{card.text.replace(/\s+/g, ' ')}" for card in data.items
+              msg.send "R2P on '#{project.name}':"
+              msg.send "[##{card.id}] #{card.text.replace(/\s+/g, ' ')}" for card in data.items
             else
               msg.send "There's nothing ready to pull. Maybe you could check the Ready column."
+
+  robot.respond /what are my cards(?:\s*(?:from|on)\s*)?(.*)?/i, (msg) ->
+    matcher = new RegExp(msg.match[1]?.trim() || "services", "i")
+    console.log "Finding project: #{matcher}"
+    fetchProjects (err, data) ->
+      if err
+        msg.send err
+      else
+        project = _.find data.items, (p) ->
+          p.name.match matcher
+        console.log "Matching project #{project.name}, fetching cards for #{msg.message.user.email_address}"
+        fetchCards project, "?where=owner:#{msg.message.user.email_address}", (err, data) ->
+          if err
+            msg.send err
+          else
+            if data.items.length > 0
+              msg.send "Here are your cards on '#{project.name}':"
+              msg.send "[##{card.id}] #{card.text.replace(/\s+/g, ' ')}" for card in data.items
+            else
+              msg.send "You don't own any cards on that board. Maybe you should get to work!"
