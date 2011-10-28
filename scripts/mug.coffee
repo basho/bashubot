@@ -17,24 +17,20 @@ yeahs = [
   ]
 
 mug = (msg) ->
-  unless msg.message.user.name == msg.robot.name
-    msg.send "Hey #{msg.message.user.name}, #{msg.random greetings}"
-    lumberg(msg)
+  lumberg(msg, "Hey #{msg.message.user.name}, #{msg.random greetings}")
 
-lumberg = (msg) ->
-  unless msg.message.user.name == msg.robot.name
-    if Math.random() > 0.8
-      msg.send msg.random(lumbergs)
+lumberg = (msg, say) ->
+  unless msg.message.user.name.match /bashobot/i
+    msg.send msg.random lumbergs if Math.random() > 0.8
+    msg.send say if say
 
 module.exports = (robot) ->
   robot.respond /mug(\s+me)?/i, mug
 
   robot.hear /^\*.*mug.*\*$/i, (msg) ->
-    lumberg(msg)
-    msg.send "*sips* *raises mug toward #{msg.message.user.name}*"
+    lumberg(msg, "*sips* *raises mug toward #{msg.message.user.name}*")
 
   robot.hear /lumberg/i, (msg) ->
-    lumberg(msg)
-    msg.send("Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
+    lumberg(msg, "Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
 
   robot.enter mug
