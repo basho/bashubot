@@ -1,5 +1,5 @@
 HTTPS = require 'https'
-_ = require 'underscore'
+_ ?= require 'underscore'
 
 apikey = process.env.AGILEZEN_APIKEY
 
