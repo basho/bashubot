@@ -37,4 +37,4 @@ module.exports = (robot) ->
     lumberg(msg)
     msg.send("Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
 
-  robot.hear /has entered the room/i, mug
+  robot.enter mug
