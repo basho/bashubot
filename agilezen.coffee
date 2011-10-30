@@ -22,18 +22,17 @@ class AgileZen
     @setup()
 
   projects: (callback) ->
-    if @robot.brain.data?.projects?
-      callback null, {"items": @robot.brain.data.projects}
+    if @robot.brain.data.projects
+      callback null, @robot.brain.data.projects
     else
       @request({"path":"/api/v1/projects?with=members"}, null, (err, data) =>
-        console.log "Got some projects."
-        @robot.brain.data.projects = data.items unless err?
+        @robot.brain.data.projects = data.items unless err
         callback err, data
       )
 
   cards: (project, query, callback) ->
     query = '' unless query?
-    @request {"path":"/api/v1/projects/#{project.id}/stories?#{query}"}, null, callback
+    @request {"path":"/api/v1/projects/#{project.id}/stories?#{encodeURIComponent query}"}, null, callback
 
   request: (options, body, callback) ->
     _.defaults(options, @defaultOptions)
@@ -68,7 +67,7 @@ class AgileZen
       request.end()
 
   boardMatcher: (string) ->
-    new RegExp("#{string}\\s*(?:from|on)?\\s*(.*)?", "i")
+    new RegExp("#{string}(?:\s*(?:from|to)\s*)?(.*)?", "i")
 
   setup: ->
     @robot.respond /kanban( me)?/i, (msg) =>
@@ -77,22 +76,12 @@ class AgileZen
     @robot.respond @boardMatcher("what can i pull"), (msg) =>
       new AgileZen.ReadyToPull(msg, this)
 
-    @robot.respond @boardMatcher("what are my (?:cards|stories)"), (msg) =>
-      new AgileZen.Owned(msg, this)
-
     @robot.respond @boardMatcher("what is blocked"), (msg) =>
       new AgileZen.Blocked(msg, this)
 
-    @robot.respond /(clear|refresh)\s+kanban(s)?/i, (msg) =>
-      delete @robot.brain.data.projects
-      msg.send "Ok, I cleared the kanban boards."
-
 class AgileZen.Action
   constructor: (@msg, @az) ->
-    try
-      @process()
-    catch err
-      @msg.send "Woops, I had an error: #{err.message}\n#{err.stack}"
+    @process()
 
   dataCallback: (emptyMessage, cb) ->
     (err, data) =>
@@ -105,24 +94,18 @@ class AgileZen.Action
           @msg.send emptyMessage
 
   requestedProject: (callback) ->
-    console.log "Matching project '#{@msg.match[1]}'"
     matcher = new RegExp(@msg.match[1]?.trim() || process.env.AGILEZEN_DEFAULT_PROJECT, "i")
-    @az.projects @dataCallback("I don't see any projects. Is my API Key right?", (projects) =>
-        foundProject = _.find projects, (project) ->
-          project? && matcher.test project.name
-        if foundProject?
-          callback(foundProject)
-        else
-          @msg.send "Woops, I can't find any project that matches #{matcher}."
+    @az.projects @dataCallback("I don't see any projects. Is my API Key right?", (projects) ->
+        callback(
+          _.find projects, (project) ->
+            matcher.test project.name
+        )
       )
 
   isMember: (project) ->
-    @findMember(project)?
-
-  findMember: (project) ->
-    lastName = new RegExp(_.last(@msg.message.user.name.split(/\s+/)), "i")
-    _.find project.members, (member) ->
-      lastName.test member.name
+    lastName = _.last @msg.message.user.name.split(/\s+/)
+    project.members.some (member) ->
+      _.last(member.name.split(/\s+/)) is lastName
 
   process: ->
     @msg.send "Woops, someone didn't implement this action!"
@@ -138,44 +121,26 @@ class AgileZen.ListBoards extends AgileZen.Action
     )
 
 class AgileZen.CardAction extends AgileZen.Action
-  sendCards: (header, cards) ->
-    messages = [header, @formatCards(cards)...]
-    @msg.send message for message in messages
-
   formatCards: (cards) ->
     cards.map (card) ->
       "[##{card.id}] #{card.text.replace(/\s+/g, ' ')}"
 
+
 class AgileZen.ReadyToPull extends AgileZen.CardAction
   process: ->
     @requestedProject (project) =>
-      @az.cards(project, "where=ready:true",
-        @dataCallback("There's nothing to pull on '#{project.name}'. Maybe you could check the Ready column.", (cards) =>
-          @sendCards("Ready to pull on '#{project.name}':", cards)
-        )
-      )
-
-class AgileZen.Owned extends AgileZen.CardAction
-  process: ->
-    @requestedProject (project) =>
-      requestor = @findMember(project)
-      unless requestor?
-        @msg.send "Sorry, you don't seem to be a member of '#{project.name}'."
-        return
-      @az.cards(project, "where=owner:#{requestor.id}+and+not(status:finished)",
-        @dataCallback("You don't have any unfinished stories on '#{project.name}'. Maybe you could check the Ready column.",
-          (cards) => @sendCards("Your stories on '#{project.name}':", cards)
-        )
-      )
+      @az.cards project, "where=status:ready",
+        @dataCallback "There's nothing to pull on '#{project.name}'. Maybe you could check the Ready column.", (cards) =>
+          messages = [ "Ready to pull on '#{project.name}':" ] + formatCards cards
+          @msg.send messages...
 
 class AgileZen.Blocked extends AgileZen.CardAction
   process: ->
     @requestedProject (project) =>
-      @az.cards(project, "where=blocked:true",
-        @dataCallback("There's nothing blocked on '#{project.name}'. Good work!",
-          (cards) => @sendCards("Blocked on '#{project.name}'", cards)
-        )
-      )
+      @az.cards project, "where=status:blocked",
+        @dataCallback "There's nothing to blocked on '#{project.name}'. Good work!", (cards) =>
+          messages = [ "Blocked on '#{project.name}':" ] + formatCards cards
+          @msg.send messages...
 
 module.exports = (robot) ->
   new AgileZen(robot)
