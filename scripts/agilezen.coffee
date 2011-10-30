@@ -140,7 +140,7 @@ class AgileZen.ListBoards extends AgileZen.Action
 class AgileZen.CardAction extends AgileZen.Action
   sendCards: (header, cards) ->
     messages = [header, @formatCards(cards)...]
-    @msg.send message for message in messages
+    @msg.send messages...
 
   formatCards: (cards) ->
     cards.map (card) ->
