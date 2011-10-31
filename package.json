@@ -1,22 +1,22 @@
 {
-  "name":        "hosted-hubot",
+  "name":        "bashubot",
   "version":     "0.1.0",
-  "author":      "GitHub Inc.",
-  "keywords":    "github hubot campfire bot",
-  "description": "A simple helpful Robot for your Company",
+  "author":      "Basho Technologies",
+  "keywords":    "basho hubot campfire",
+  "description": "A helpful little robot for our Campfire chats, based on Github's Hubot.",
   "licenses":     [{
-    "type":       "MIT",
-    "url":        "http://github.com/github/hubot/raw/master/LICENSE"
+    "type":       "Apache 2",
+    "url":        "http://github.com/basho/bashubot/raw/master/LICENSE"
   }],
 
   "repository" : {
     "type" : "git",
-    "url" : "http://github.com/github/hubot.git"
+    "url" : "http://github.com/basho/bashubot.git"
   },
 
   "dependencies": {
-    "hubot": "1.1.6",
-    "hubot-scripts": "1.1.4",
+    "hubot": "1.1.7",
+    "hubot-scripts": "1.1.5",
     "optparse":"1.0.1",
     "underscore":"latest"
   }
