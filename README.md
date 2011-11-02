@@ -12,7 +12,8 @@ Basho-specific scripts that you may or may not find useful.
 
 An inside Basho joke. May involve Bill Lumberg. Try:
 
-> *mug*
+> \*mug\*
+
 > Bill Lumberg is my hero.
 
 ## agilezen
@@ -21,5 +22,7 @@ Connects to your AgileZen kanban boards, letting you check status and
 other useful things.
 
 > bashobot What can I pull
+
 > bashobot What are my stories from Super Secret Project
+
 > bashobot What is blocked on Production
