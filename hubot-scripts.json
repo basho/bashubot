@@ -1,3 +1,4 @@
 ["redis-brain.coffee",
  "tweet.coffee", 
- "shipit.coffee"]
+ "shipit.coffee",
+ "bees.coffee"]
