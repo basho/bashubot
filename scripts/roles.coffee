@@ -9,6 +9,10 @@
 #
 
 module.exports = (robot) ->
+
+  getAmbiguousUserText = (users) ->
+    "Be more specific, I know #{users.length} people named like that: #{(user.name for user in users).join(", ")}"
+
   robot.respond /who is ([\w .-]+)\?*$/i, (msg) ->
     name = msg.match[1]
 
@@ -16,22 +20,29 @@ module.exports = (robot) ->
       msg.send "Who ain't I?"
     else if name is robot.name
       msg.send "The best."
-    else if user = robot.userForName name
-      user.roles = user.roles or [ ]
-      if user.roles.length > 0
-        msg.send "#{name} is #{user.roles.join(", ")}."
-      else
-        msg.send "#{name} is nothing to me."
     else
-      msg.send "#{name}? Never heard of 'em"
+      users = robot.usersForFuzzyName(name)
+      if users.length is 1
+        user = users[0]
+        user.roles = user.roles or [ ]
+        if user.roles.length > 0
+          msg.send "#{name} is #{user.roles.join(", ")}."
+        else
+          msg.send "#{name} is nothing to me."
+      else if users.length > 1
+        msg.send getAmbiguousUserText users
+      else
+        msg.send "#{name}? Never heard of 'em"
 
-  robot.respond /([\w .-]+) is (["'\w: ]+)[.!]*$/i, (msg) ->
+  robot.respond /([\w .-_]+) is (["'\w: -_]+)[.!]*$/i, (msg) ->
     name    = msg.match[1]
     newRole = msg.match[2].trim()
 
     unless name in ['who', 'what', 'where', 'when', 'why']
       unless newRole.match(/^not\s+/i)
-        if user = robot.userForName name
+        users = robot.usersForFuzzyName(name)
+        if users.length is 1
+          user = users[0]
           user.roles = user.roles or [ ]
 
           if newRole in user.roles
@@ -42,15 +53,19 @@ module.exports = (robot) ->
               msg.send "Ok, I am #{newRole}."
             else
               msg.send "Ok, #{name} is #{newRole}."
+        else if users.length > 1
+          msg.send getAmbiguousUserText users
         else
           msg.send "I don't know anything about #{name}."
 
-  robot.respond /([\w .-]+) is not (["'\w: ]+)[.!]*$/i, (msg) ->
+  robot.respond /([\w .-_]+) is not (["'\w: -_]+)[.!]*$/i, (msg) ->
     name    = msg.match[1]
     newRole = msg.match[2].trim()
 
     unless name in ['who', 'what', 'where', 'when', 'why']
-      if user = robot.userForName name
+      users = robot.usersForFuzzyName(name)
+      if users.length is 1
+        user = users[0]
         user.roles = user.roles or [ ]
 
         if newRole not in user.roles
@@ -58,6 +73,8 @@ module.exports = (robot) ->
         else
           user.roles = (role for role in user.roles when role isnt newRole)
           msg.send "Ok, #{name} is no longer #{newRole}."
-
+      else if users.length > 1
+        msg.send getAmbiguousUserText users
       else
         msg.send "I don't know anything about #{name}."
+
