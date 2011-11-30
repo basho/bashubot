@@ -1,5 +1,8 @@
 ["redis-brain.coffee",
  "tweet.coffee", 
  "shipit.coffee",
- "bees.coffee"
+ "bees.coffee",
+ "megusta.coffee",
+ "ping.coffee",
+ "carlton.coffee"
 ]
