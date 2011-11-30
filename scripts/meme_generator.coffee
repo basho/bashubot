@@ -90,6 +90,6 @@ khanify = (msg) ->
   msg = msg.toUpperCase()
   vowels = [ 'A', 'E', 'I', 'O', 'U' ]
   index = -1
-  for v of vowels when msg.lastIndexOf(v) > index
+  for v in vowels when msg.lastIndexOf(v) > index
     index = msg.lastIndexOf(v)
-  "#{msg.slice 0, index}#{Array(10).join msg.charAt(2)}#{msg.slice index}!!!!!"
+  "#{msg.slice 0, index}#{Array(10).join msg.charAt(index)}#{msg.slice index}!!!!!"
