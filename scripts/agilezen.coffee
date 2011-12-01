@@ -3,7 +3,8 @@
 # kanban[ me] - Lists your kanban boards by name
 # what can i pull[ from|on][ <project>] - finds ready-to-pull cards on your project
 # what is blocked[ from|on][ <project>] - finds blocked cards on your project
-#
+# what are my [cards|stories] [from|on] [<project>] - something
+# what is up with story [<story_id>] [from|on] [<project>] - something
 
 HTTPS = require 'https'
 _ = require 'underscore'
@@ -34,6 +35,10 @@ class AgileZen
   cards: (project, query, callback) ->
     query = '' unless query?
     @request {"path":"/api/v1/projects/#{project.id}/stories?#{query}"}, null, callback
+  
+  card: (project, card, callback) ->
+    @request {"path":"/api/v1/projects/#{project.id}/stories/#{card}"}, null, callback
+
 
   request: (options, body, callback) ->
     _.defaults(options, @defaultOptions)
@@ -83,6 +88,10 @@ class AgileZen
     @robot.respond @boardMatcher("what is blocked"), (msg) =>
       new AgileZen.Blocked(msg, this)
 
+    @robot.respond @boardMatcher("what is up with story ([0-9]+)"), (msg) =>
+      new AgileZen.Status(msg, this)
+
+
     @robot.respond /(clear|refresh)\s+kanban(s)?/i, (msg) =>
       delete @robot.brain.data.projects
       msg.send "Ok, I cleared the kanban boards."
@@ -99,14 +108,16 @@ class AgileZen.Action
       if err
         @msg.send err
       else
-        if data.items.length > 0
+        if data.items?.length > 0
           cb data.items
+        else if data.id
+          cb data
         else
           @msg.send emptyMessage
 
-  requestedProject: (callback) ->
-    console.log "Matching project '#{@msg.match[1]}'"
-    matcher = new RegExp(@msg.match[1]?.trim() || process.env.AGILEZEN_DEFAULT_PROJECT, "i")
+  requestedProject: (callback, index = 1) ->
+    console.log "Matching project '#{@msg.match[index]}'"
+    matcher = new RegExp(@msg.match[index]?.trim() || process.env.AGILEZEN_DEFAULT_PROJECT, "i")
     @az.projects @dataCallback("I don't see any projects. Is my API Key right?", (projects) =>
         foundProject = _.find projects, (project) ->
           project? && matcher.test project.name
@@ -115,6 +126,11 @@ class AgileZen.Action
         else
           @msg.send "Woops, I can't find any project that matches #{matcher}."
       )
+
+  requestedProjectAndCard: (callback) ->
+    projectCallback = (project) ->
+      callback(project, @msg.match[1]?.trim())
+    @requestedProject projectCallback, 2
 
   isMember: (project) ->
     @findMember(project)?
@@ -141,10 +157,17 @@ class AgileZen.CardAction extends AgileZen.Action
   sendCards: (header, cards) ->
     messages = [header, @formatCards(cards)...]
     @msg.send messages...
+    
+  sendCard: (card) ->
+    @msg.send @formatCard(card)
 
   formatCards: (cards) ->
     cards.map (card) ->
       "[##{card.id}] #{card.text.replace(/\s+/g, ' ')}"
+
+  formatCard: (card) ->
+    "[##{card.id}] #{card.text.replace(/\s+/g, ' ')} [Phase: #{card.phase.name}] [Status: #{card.status}]"
+    
 
 class AgileZen.ReadyToPull extends AgileZen.CardAction
   process: ->
@@ -167,6 +190,20 @@ class AgileZen.Owned extends AgileZen.CardAction
           (cards) => @sendCards("Your stories on '#{project.name}':", cards)
         )
       )
+
+class AgileZen.Status extends AgileZen.CardAction
+  process: ->
+    callback = (project) =>
+      requestor = @findMember(project)
+      unless requestor?
+        @msg.send "Sorry, you don't seem to be a member of '#{project.name}'."
+        return
+      @az.card(project, @msg.match[1].trim(),
+        @dataCallback("There is no story like that on '#{project.name}'.",
+          (card) => @sendCard(card)
+        )
+      )
+    @requestedProject callback, 2
 
 class AgileZen.Blocked extends AgileZen.CardAction
   process: ->
