@@ -4,5 +4,6 @@
  "bees.coffee",
  "megusta.coffee",
  "ping.coffee",
- "achievement_unlocked.coffee"
+ "achievement_unlocked.coffee",
+ "meme_generator.coffee"
 ]
