@@ -36,6 +36,10 @@ onCall =
 
 module.exports = (robot) ->
 
+  robot.hear /who is on[- ]call\??/i, (msg) ->
+    msg.robot.logger.info "Checking on-call."
+    onCall.list(msg)
+
   robot.respond /show me on[- ]call\??/i, (msg) ->
     msg.robot.logger.info "Checking on-call."
     onCall.list(msg)
