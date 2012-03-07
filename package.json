@@ -19,6 +19,7 @@
     "hubot-scripts": "2.0.6",
     "underscore":"latest",
     "hiredis":"latest",
-    "optparse":"latest"
+    "optparse":"latest",
+    "scoped-http-client":"latest"
   }
 }
