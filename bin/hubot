@@ -1,17 +1,6 @@
 #!/bin/sh
 
-#/usr/bin/env npm install
+/usr/bin/env npm install
 export PATH="node_modules/.bin:node_modules/hubot/node_modules/.bin:$PATH"
 
-echo "#!/bin/sh" > bin/env.sh
-exec heroku config --app bashubot | 
-while read line; do
-  if [[ $line != PATH* && $line != REDISTOGO_URL* ]]
-  then
-    echo "export ${line/ *=> /=\"}\"" >> bin/env.sh;
-  fi
-
-done
-chmod +x bin/env.sh
-source bin/env.sh
 exec node_modules/.bin/hubot -n bashobot "$@"
