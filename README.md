@@ -12,7 +12,7 @@ Basho-specific scripts that you may or may not find useful.
 3. Use homebrew to install redis: brew install redis
 4. run npm install
 5. run redis: redis-server /usr/local/etc/redis.conf
-6. run ./bin/hubot
+6. run ./bin/hubot-dev
 
 # Custom Scripts
 

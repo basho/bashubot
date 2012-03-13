@@ -20,6 +20,8 @@ module.exports = (robot) ->
       msg.send "Who ain't I?"
     else if name is robot.name
       msg.send "The best."
+    else if name.toLowerCase() is "on-call" or name.toLowerCase() is "on call"
+      # nothing
     else
       users = robot.usersForFuzzyName(name)
       if users.length is 1
