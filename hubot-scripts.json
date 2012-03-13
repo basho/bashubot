@@ -1,4 +1,5 @@
 [
+ "ascii.coffee",
  "redis-brain.coffee",
  "tweet.coffee", 
  "shipit.coffee",
