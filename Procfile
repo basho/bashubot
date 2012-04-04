@@ -1,1 +1,1 @@
-app: bin/hubot -a hipchat -n bashobot
+app: bin/hubot -a campfire -n bashobot
