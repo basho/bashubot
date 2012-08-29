@@ -28,5 +28,5 @@ response = [
 ]
 
 module.exports = (robot) ->
-  robot.respond /('eight ball'|eightball|'8 ball'|8ball|8-ball)( me)? (.*)/i, (msg) ->
+  robot.respond /('magic eight ball'|'magic 8 ball'|'m8b'|)( me)? (.*)/i, (msg) ->
     msg.send msg.random response
