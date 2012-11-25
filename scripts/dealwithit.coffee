@@ -5,6 +5,7 @@
 #
 
 deal = [
+  "http://i.imgur.com/452Pe.gif",
   "http://i.imgur.com/Wj3Do.gif",
   "http://i.imgur.com/3PWHn.gif",
   "http://i.imgur.com/To8mu.gif",
