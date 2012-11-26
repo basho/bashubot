@@ -4,6 +4,7 @@
 # show me on-call - list who is on-call
 # put <name>[ ,<name>...] on-call - add people to the on-call list
 # remove <name>[ ,<name>...] from on-call - remove people from the on-call list
+# reset on-call - resets to nobody on-call
 
 util = require 'util'
 HttpClient = require 'scoped-http-client'
@@ -54,3 +55,6 @@ module.exports = (robot) ->
     msg.robot.logger.info "Removing #{util.inspect people} from on-call list"
     onCall.modify(msg, people, _.difference)
 
+  robot.respond  /reset on[- ]call\s*/i, (msg) ->
+    msg.robot.logger.info "Removing all from on-call list"
+    onCall.modify(msg, ["Justin Pease"], _.intersection)
