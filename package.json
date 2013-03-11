@@ -21,7 +21,7 @@
     "underscore":"latest",
     "hiredis":"latest",
     "optparse":"latest",
-    "scoped-http-client":"latest"
+    "scoped-http-client":"0.9.7"
   },
 
   "engines": {
