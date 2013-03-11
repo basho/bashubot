@@ -7,5 +7,6 @@
 
 module.exports = (robot) ->
   robot.hear /(ticket|response|review)[^#]*?#\s*(\d+)/i, (msg)->
-    ticketNum = escape(msg.match[2])
-    msg.send "https://basho.zendesk.com/agent/#/tickets/"+ticketNum
+  	if msg.message.user.name isnt "Zendesk"
+      ticketNum = escape(msg.match[2])
+      msg.send "https://basho.zendesk.com/agent/#/tickets/"+ticketNum+"    "+msg.message.user.name
