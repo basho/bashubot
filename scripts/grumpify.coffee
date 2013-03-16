@@ -3,7 +3,7 @@ grumpify = (msg) ->
   return msg if msg.slice(-1) is '?'
   msg + '?'
 
-
+# Lifted from hubot-scripts / meme_generator.coffee
 memeGenerator = (msg, generatorID, imageID, text0, text1, callback) ->
   username = process.env.HUBOT_MEMEGEN_USERNAME
   password = process.env.HUBOT_MEMEGEN_PASSWORD
