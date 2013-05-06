@@ -18,7 +18,8 @@ pony = [
   "http://i.imgur.com/8a2qC.gif",
   "http://i.imgur.com/gvVLR.jpg",
   "http://i.imgur.com/j09Sw.jpg",
-  "http://i.imgur.com/qZPbw.jpg"
+  "http://i.imgur.com/qZPbw.jpg",
+  "http://i.imgur.com/cDqRl9k.jpg"
 ]
 
 module.exports = (robot) ->
