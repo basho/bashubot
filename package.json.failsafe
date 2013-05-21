@@ -21,6 +21,7 @@
     "underscore":"1.1.4",
     "hiredis":"0.1.15",
     "optparse":"1.0.4",
+	"cron":"1.0.1",
     "scoped-http-client":"0.9.7"
   },
 
