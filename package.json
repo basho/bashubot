@@ -16,8 +16,8 @@
 
   "dependencies": {
     "hubot-hipchat": ">= 1.1.2",
-    "hubot": "2.3.2",
-    "hubot-scripts": "2.2.2",
+    "hubot": ">= 2.3.2",
+    "hubot-scripts": ">= 2.2.2",
     "underscore":"latest",
     "hiredis":"latest",
     "optparse":"latest",
