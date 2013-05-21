@@ -33,7 +33,8 @@ onCall =
           if err
             msg.reply "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
           else
-            msg.reply "Ok, I set the on-call list to: #{newOnCall.join(', ')}."
+            msg.reply "Ok, I updated the on-call list."
+            @list(msg)
 
 module.exports = (robot) ->
 
