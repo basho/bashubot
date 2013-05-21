@@ -15,17 +15,17 @@
   },
 
   "dependencies": {
-    "hubot-hipchat": ">= 1.1.2",
-    "hubot": ">= 2.3.2",
-    "hubot-scripts": ">= 2.2.2",
-    "underscore":"latest",
-    "hiredis":"latest",
-    "optparse":"latest",
+    "hubot-hipchat": "2.5.1-1",
+    "hubot": "2.5.1",
+    "hubot-scripts": "2.4.3",
+    "underscore":"1.1.4",
+    "hiredis":"0.1.15",
+    "optparse":"1.0.4",
     "scoped-http-client":"0.9.7"
   },
 
   "engines": {
-	"node": "latest",
-	"npm": "latest"
+	"node": "0.10.6",
+	"npm": "1.2.21"
   }
 }
