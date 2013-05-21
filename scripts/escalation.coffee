@@ -38,27 +38,24 @@ onCall =
 
 module.exports = (robot) ->
 
-  robot.hear /who is on[- ]call\??/i, (msg) ->
-    msg.robot.logger.info "Checking on-call."
-    msg.robot.logger.info "url: " + onCall.url
-    msg.robot.logger.info "user: " + onCall.user
-    msg.robot.logger.info "pass: " + onCall.password
-    onCall.list(msg)
-
-  robot.hear /show me on[- ]call\??/i, (msg) ->
+  robot.respond /who is on[- ]call\??/i, (msg) ->
     msg.robot.logger.info "Checking on-call."
     onCall.list(msg)
 
-  robot.hear /put (.*) on[- ]call\s*/i, (msg) ->
+  robot.respond /show me on[- ]call\??/i, (msg) ->
+    msg.robot.logger.info "Checking on-call."
+    onCall.list(msg)
+
+  robot.respond /put (.*) on[- ]call\s*/i, (msg) ->
     people = msg.match[1].trim().split(/\s*,\s*/)
     msg.robot.logger.info "Adding #{util.inspect people} to on-call list"
     onCall.modify(msg, people, _.union)
 
-  robot.hear  /remove (.*) from on[- ]call\s*/i, (msg) ->
+  robot.respond  /remove (.*) from on[- ]call\s*/i, (msg) ->
     people = msg.match[1].trim().split(/\s*,\s*/)
     msg.robot.logger.info "Removing #{util.inspect people} from on-call list"
     onCall.modify(msg, people, _.difference)
 
-  robot.hear  /reset on[- ]call\s*/i, (msg) ->
+  robot.respond  /reset on[- ]call\s*/i, (msg) ->
     msg.robot.logger.info "Removing all from on-call list"
     onCall.modify(msg, ["Justin Pease"], _.intersection)
