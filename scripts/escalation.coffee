@@ -527,16 +527,16 @@ module.exports = (robot) ->
     eval "obj=#{msg.match[1]}"
     msg.reply "#{util.inspect obj}"
 
-  robot.respond /purge on-call schedule/, (msg) ->
+  robot.respond /purge\s*(?:the )?on[- ]call schedule/, (msg) ->
     onCall.schedule.purge(msg)
 
-  robot.respond /(check|repair|fix|unfuck) on-call schedule index/, (msg) ->
+  robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index/, (msg) ->
     onCall.schedule.checkIndex(msg)
 
-  robot.respond /apply on-call schedule/, (msg) ->
+  robot.respond /apply (?:the )?on[- ]call schedule/, (msg) ->
     onCall.schedule.applySchedule(msg)
 
-  robot.respond /set on-call schedule (?:for|on)? (\d+\/\d+\/\d\d\d\d) to (.*)/, (msg) ->
+  robot.respond /set (?:the)?\s*on[- ]call schedule (?:for|on)?\s*(\d+\/\d+\/\d\d\d\d) to (.*)/, (msg) ->
     people = msg.match[2].split(",")
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
     msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people)
