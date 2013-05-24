@@ -2,7 +2,6 @@
 #
 # deal with it - display a "deal with it" gif
 #
-#
 
 deal = [
   "http://i.imgur.com/452Pe.gif",
