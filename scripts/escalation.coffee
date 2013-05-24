@@ -60,7 +60,7 @@ clone = (obj) ->
   return newInstance
 
 onCall =
-  testing: true
+  testing: false
   url: process.env.ESCALATION_URL
   user: process.env.ESCALATION_USER
   password: process.env.ESCALATION_PASSWORD
@@ -432,11 +432,13 @@ onCall =
       oldidx = @getIndexEntry msg, idx["date"] - 1000, false
       response = ["Updated to the on-call schedule for #{@epoch2Date(epoch)}"]
       if oldidx
-        sched = @getEntryByIndex(msg, oldidx)
-        response.push "Old schedule: #{@prettyEntry sched}"
-        onCall.modify(msg, sched["people"], _.difference)
+        osched = @getEntryByIndex(msg, oldidx)
+        response.push "Old schedule: #{@prettyEntry osched}"
       sched = @getEntryByIndex(msg, idx)
       response.push "New schedule: #{@prettyEntry sched}"
+      oldppl = _.difference(osched["people"],sched["people"])
+      response.push "Removing #{oldppl.toString()}"
+      response.push "Addming #{sched['people'].toString()}"
       onCall.modify(msg, sched["people"], _.union)
       msg.reply response.join("\n")
 
