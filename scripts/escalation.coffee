@@ -348,10 +348,10 @@ onCall =
     #import: (msg) ->
     
     fromCSV: (msg) ->
-      msg.robot.logger.info util.inspect msg
+      msg.robot.logger.info "Upload from CSV"
       lines = msg.message.text.split("\n")
       response = []
-      for line in lines
+      for line in lines[1..]
         fields = lines.split(",")
         dt = @makeDate(fields[0])
         if not isNaN dt
