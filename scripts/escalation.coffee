@@ -430,15 +430,16 @@ onCall =
         msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
         return
       oldidx = @getIndexEntry msg, idx["date"] - 1000, false
-      response = ["Updated to the on-call schedule for #{@epoch2Date(epoch)}"]
+      sched = @getEntryByIndex(msg, idx)
+      response = ["Updating to the on-call schedule for #{@epoch2Date(epoch)}"]
       if oldidx
         osched = @getEntryByIndex(msg, oldidx)
         response.push "Old schedule: #{@prettyEntry osched}"
-      sched = @getEntryByIndex(msg, idx)
+        oldppl = _.difference(osched["people"],sched["people"])
       response.push "New schedule: #{@prettyEntry sched}"
-      oldppl = _.difference(osched["people"],sched["people"])
-      response.push "Removing #{oldppl.toString()}"
-      response.push "Addming #{sched['people'].toString()}"
+      if oldppl?
+        response.push "Removing #{oldppl.toString()}"
+      response.push "Adding #{sched['people'].toString()}"
       onCall.modify(msg, sched["people"], _.union)
       msg.reply response.join("\n")
 
