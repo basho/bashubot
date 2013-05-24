@@ -116,8 +116,8 @@ onCall =
       dNow = new Date
       usr =
         name: msg.message.user["name"] ? "<name missing>"
-        id: msg.message.user["id"] ? "<id missing>"
-        room: msg.message.user["room"] ? "<room missing>"
+        id: msg.message.user["jid"] ? "<id missing>"
+        room: msg.message["room"] ? "<room missing>"
       audit =
         action: action
         date: dNow.getTime()
@@ -326,6 +326,9 @@ onCall =
       eDate = @epoch2Date(@makeDate(entry["date"]))
       if iDate != eDate
         return {"error":"index and entry don't match\nIndex: #{util.inspect idx}\nEntry: #{util.inspect entry}"}
+      current = @getIndexEntry(msg, idx["date"], true)
+      if current?
+        idx["audit"] = _.union(current["audit"],idx["audit"])
       @insertIndex(msg,idx)
       msg.robot.brain.set "ocs-#{idx['date']}", entry
       return {"success":"Saved schedule entry for #{entry['date']}"}
@@ -343,6 +346,21 @@ onCall =
         return "#{sched['date']},#{sched['people'].toString() if sched['people'] instanceof Array}"
 
     #import: (msg) ->
+    
+    fromCSV: (msg) ->
+      msg.robot.logger.info util.inspect msg
+      lines = msg.message.text.split("\n")
+      for line in lines
+        fields = lines.split(",")
+        dt = @makeDate(fields[0])
+        if not isNaN dt
+         ppl = fields[1..].join(",")
+         idx = @newIndexEntry(msg, dt, false, "upload")
+         sched = @newScheduleEntry(@epoch2Date(dt), ppl)
+         i = @getIndexEntry(msg, dt)
+         if i?
+           @deleteEntryByIndex(msg, i)     
+         @saveEntry(msg, idx, sched)
 
     # return the audit history entries for the requestd range
     audit: (msg, fromDate, toDate) ->
@@ -512,8 +530,8 @@ onCall =
     # ignore confirmation for 5 seconds to accomodate Hipchate duplicating messages
     # ignore confirmation entries older than 5 minutes
     confirm: (msg, note) ->
-      userid = msg.message.user.id
-      room = msg.message.user.room
+      userid = msg.message.user.jid
+      room = msg.message.room
       cmd = msg.message.text
       confmsg = msg.robot.brain.get "ocs-confirm-#{userid}-#{room}"
       conftime = new Date
@@ -542,6 +560,9 @@ module.exports = (robot) ->
 
   robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index/, (msg) ->
     onCall.schedule.checkIndex(msg)
+
+  robot.respond /load on[- ]call schedule\s*\n?(.*)/, (msg) ->
+    onCall.schedule.fromCSV(msg)
 
   robot.respond /apply (?:the )?on[- ]call schedule/, (msg) ->
     onCall.schedule.applySchedule(msg)
