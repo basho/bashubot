@@ -158,9 +158,7 @@ onCall =
         stop = @makeDate(toDate)
         start = stop if not start? or isNaN start
         stop = start if not stop? or isNaN stop
-        msg.robot.logger.info "\nStart: #{start}\n#{stop}\n#{util.inspect idx}"
         idx = idx.filter (entry) -> (entry["date"] >= start) and (entry["date"] <= stop)
-        msg.robot.logger.info "#{util.inspect idx}"
       return idx
 
     saveIndex: (msg, index) ->
@@ -182,7 +180,7 @@ onCall =
 
     checkIndex: (msg) ->
       #fake message to identify the repair process as actor
-      msg.robot.logger.info "Check index #{util.inspect msg.message.user}"
+      msg.robot.logger.info "Check/Repair index #{util.inspect msg.message.user}"
       fakemsg =
         robot: msg.robot
         message:
@@ -367,7 +365,6 @@ onCall =
     # return the requested block of entries in CSV format
     toCSV: (msg,fromDate,toDate) ->
       idx = @getIndexRange(msg,fromDate,toDate,false)
-      msg.robot.logger.info util.inspect idx
       response = ["Here is the on-call schedule"]
       if idx.length < 1
         i = @getIndexEntry(msg, fromDate)
@@ -571,8 +568,13 @@ module.exports = (robot) ->
     msg.robot.logger.info "Clear the on-call schedule from #{msg.match[1]} to #{msg.match[2]}"
     onCall.schedule.clear(msg, msg.match[1], msg.match[2])
 
-  robot.respond /(?:export|display)\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:until|to|through|thru|[-])*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
-    onCall.schedule.toCSV(msg, msg.match[1], msg.match[2])
+  robot.respond /(?:export|display)\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(today|\d+\/\d+\/\d\d\d\d)?\s*(?:until|to|through|thru|[-])*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+    if /today/i.test msg.match[1]
+      today = new Date
+      fromDate = onCall.schedule.epoch2Date(today.getTime())
+    else
+      fromDate = msg.match[1]
+    onCall.schedule.toCSV(msg, fromDate, msg.match[2])
 
   robot.respond /audit\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:through|thru|-)*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     onCall.schedule.audit(msg,msg.match[1],msg.match[2])
