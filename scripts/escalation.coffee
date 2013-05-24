@@ -350,6 +350,7 @@ onCall =
     fromCSV: (msg) ->
       msg.robot.logger.info util.inspect msg
       lines = msg.message.text.split("\n")
+      response = []
       for line in lines
         fields = lines.split(",")
         dt = @makeDate(fields[0])
@@ -360,7 +361,8 @@ onCall =
          i = @getIndexEntry(msg, dt)
          if i?
            @deleteEntryByIndex(msg, i)     
-         @saveEntry(msg, idx, sched)
+         response.push @saveEntry(msg, idx, sched)
+      msg.reply response
 
     # return the audit history entries for the requestd range
     audit: (msg, fromDate, toDate) ->
