@@ -17,7 +17,6 @@
 # Commands:
 #  hubot add <name>[ ,<name>...] to on-call schedule for <mm/dd/yyyy> - add people to a schedule
 #  hubot unschedule <name>[, <name>...] from on-call for <mm/dd/yyyy> - remove people from a schedule
-#  hubot upload on-call schedule from <url> - url must return a CSV document
 #  hubot clear the on-call schedule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - remove the schedule entries for dates
 #  hubot export the on-call schdeule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - list the on-call schedule in a csv text blob
 #  hubot display the on-call schdeule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - list the on-call schedule in a csv text blob
@@ -32,12 +31,33 @@
 #   Those fine folks at Basho Technologies
 #
 
-
 util = require 'util'
 cronJob = require('cron').CronJob
 HttpClient = require 'scoped-http-client'
 _ = require 'underscore'
 
+#clone is straight from the cookbook
+clone = (obj) ->
+  if not obj? or typeof obj isnt 'object'
+    return obj
+
+  if obj instanceof Date
+    return new Date(obj.getTime()) 
+
+  if obj instanceof RegExp
+    flags = ''
+    flags += 'g' if obj.global?
+    flags += 'i' if obj.ignoreCase?
+    flags += 'm' if obj.multiline?
+    flags += 'y' if obj.sticky?
+    return new RegExp(obj.source, flags) 
+
+  newInstance = new obj.constructor()
+
+  for key of obj
+    newInstance[key] = clone obj[key]
+
+  return newInstance
 
 onCall =
   testing: true
@@ -102,24 +122,24 @@ onCall =
         action: action
         date: dNow.getTime()
         user: usr
+      return audit
 
 
     newIndexEntry: (msg, dt, deleted, action) ->
       dNow = new Date
       idx =
         date: @makeDate(dt)
-        deleted: (false || deleted)
+        deleted: deleted ? false
         lastupdated: dNow.getTime()
         audit: [
           @newAuditEntry(msg, if action then action else "create")
           ]
-      msg.robot.logger.info "Created index: #{util.inspect idx}"
-      return idx
 
     newScheduleEntry: (date, people) ->
       sched =
         date: @epoch2Date(@makeDate(date))
         people: if people then people else []
+      return sched
 
     getIndex: (msg,deletedok) ->
       i = msg.robot.brain.get 'ocs-index'
@@ -144,13 +164,14 @@ onCall =
     saveIndex: (msg, index) ->
       if index instanceof Array
         msg.robot.brain.set 'ocs-index', index
+      else 
+        msg.robot.logger.info "Invalid index submitted: #{util.inspect index}"
 
     insertIndex: (msg,idx) ->
       oIndex = @getIndex(msg)
-      if (idx["date"])
+      if idx["date"]
         index = oIndex.filter (entry) -> entry['date'] != idx['date']
-        index.push(idx)
-        msg.robot.logger.info "Saving index #{util.inspect idx}"
+        index.push idx
         index.sort (a, b) ->
           return -1 if (a["date"] < b["date"])
           return 1 if (a["date"] > b["date"])
@@ -159,6 +180,7 @@ onCall =
 
     checkIndex: (msg) ->
       #fake message to identify the repair process as actor
+      msg.robot.logger.info "Check index #{util.inspect msg.message.user}
       fakemsg =
         robot: msg.robot
         message:
@@ -200,7 +222,7 @@ onCall =
                 msg.robot.brain.remove k
             else
               idx = @getIndexEntry(msg, m[1], true)
-              if idx
+              if idx and idx['date'] == @makeDate(m[1])
                 if idx['deleted']
                     response.push "Index entry for schedule date '#{sched['date']}' marked deleted, undeleting"
                     idx['deleted'] = false
@@ -342,13 +364,10 @@ onCall =
 
     # return the requested block of entries in CSV format
     toCSV: (msg,fromDate,toDate) ->
-      msg.robot.logger.info "toCSV(#{msg}, #{fromDate}, #{toDate})"
       idx = @getIndexRange(msg,fromDate,toDate,false)
-      msg.robot.logger.info "#{idx.length} schedule entries"
       response = ["Here is the on-call schedule"]
       if idx.length < 1
         i = @getIndexEntry(msg, fromDate)
-        msg.robot.logger.info util.inspect i
         if i and i['date']
           response.push "#{@prettyEntry(@getEntryByIndex(msg,i))}"
         else
@@ -434,15 +453,12 @@ onCall =
         # there's no entry for the first date in the range
         # figure out if this change is different than the previous entry
         prev = @getIndexEntry(msg, dFrom)
-        msg.robot.logger.info util.inspect prev
         prevppl = []
         if prev and prev['date']
             prevsched = @getEntryByIndex(msg, prev)
-            if prevsched and prevsched['people'] then prevppl = prevsched['people'].dup
+            if prevsched and prevsched['people'] then prevppl = prevsched['people']
         newppl = op(prevppl, people)
-        msg.robot.logger.info util.inspect newppl
         newdiff = _.union(_.difference(newppl, prevppl), _.difference(prevppl, newppl))
-        msg.robot.logger.info util.inspect newdiff
         # only add a new entry if the list of names changes
         if newdiff.length != 0
           response.push @createEntry(msg, dFrom, newppl)
@@ -504,13 +520,17 @@ onCall =
         return false
 
 module.exports = (robot) ->
-  robot.brain.on 'loaded', =>
-    onCall.schedule.bootstrap(robot)
+  onCall.schedule.bootstrap(robot)
+
+  # for testing only - remove prior to deployment
+  robot.hear /inspect (.*)/, (msg) ->
+    eval "obj=#{msg.match[1]}"
+    msg.reply "#{util.inspect obj}"
 
   robot.respond /purge on-call schedule/, (msg) ->
     onCall.schedule.purge(msg)
 
-  robot.respond /(check|repair) on-call schedule index/, (msg) ->
+  robot.respond /(check|repair|fix|unfuck) on-call schedule index/, (msg) ->
     onCall.schedule.checkIndex(msg)
 
   robot.respond /apply on-call schedule/, (msg) ->
