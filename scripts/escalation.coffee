@@ -312,7 +312,7 @@ onCall =
        idx = @newIndexEntry(msg, dt, false, "create - #{ppl}")
        @saveEntry(msg, idx, sched)
       else
-        if overwrite then @deteleEntryByIndex(msg, current)
+        if overwrite then @deleteEntryByIndex(msg, current)
         if current['deleted']
             current['deleted'] = false
             current['audit'].push @newAuditEntry(msg, "create - #{ppl}")
@@ -339,7 +339,7 @@ onCall =
       idx["audit"].push @newAuditEntry(msg, "delete")
       idx["lastupdated"] = timenow.getTime()
       msg.robot.brain.remove "ocs-#{idx['date']}"
-      @saveIndex(msg, idx)
+      @insertIndex(msg, idx)
 
     prettyEntry: (sched) ->
       if sched["date"]
@@ -349,20 +349,16 @@ onCall =
     
     fromCSV: (msg) ->
       msg.robot.logger.info "Upload from CSV"
-      lines = msg.message.text.split("\n")
+      lines = "#{msg.message.text}".split(";")
       response = []
       for line in lines[1..]
-        fields = lines.split(",")
+        fields = line.split(",")
         dt = @makeDate(fields[0])
         if not isNaN dt
-         ppl = fields[1..].join(",")
-         idx = @newIndexEntry(msg, dt, false, "upload")
-         sched = @newScheduleEntry(@epoch2Date(dt), ppl)
-         i = @getIndexEntry(msg, dt)
-         if i?
-           @deleteEntryByIndex(msg, i)     
-         response.push @saveEntry(msg, idx, sched)
-      msg.reply response
+          response.push line
+          msg.robot.logger.info "Upload entry #{line}"
+          response.push util.inspect @createEntry(msg, dt, fields[1..], true)
+      msg.reply response.join("\n")
 
     # return the audit history entries for the requestd range
     audit: (msg, fromDate, toDate) ->
