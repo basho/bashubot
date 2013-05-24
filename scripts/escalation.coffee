@@ -180,7 +180,7 @@ onCall =
 
     checkIndex: (msg) ->
       #fake message to identify the repair process as actor
-      msg.robot.logger.info "Check index #{util.inspect msg.message.user}
+      msg.robot.logger.info "Check index #{util.inspect msg.message.user}"
       fakemsg =
         robot: msg.robot
         message:
