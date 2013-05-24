@@ -156,9 +156,11 @@ onCall =
       if (fromDate or toDate)
         start = @makeDate(fromDate)
         stop = @makeDate(toDate)
-        start = stop unless start
-        stop = start unless stop
+        start = stop unless start?
+        stop = start unless stop?
+        msg.robot.logger.info "\nStart: #{start}\n#{stop}\n#{util.inspect idx}"
         idx = idx.filter (entry) -> (entry["date"] >= start) and (entry["date"] <= stop)
+        msg.robot.logger.info "#{util.inspect idx}"
       return idx
 
     saveIndex: (msg, index) ->
@@ -365,6 +367,7 @@ onCall =
     # return the requested block of entries in CSV format
     toCSV: (msg,fromDate,toDate) ->
       idx = @getIndexRange(msg,fromDate,toDate,false)
+      msg.robot.logger.info util.inspect idx
       response = ["Here is the on-call schedule"]
       if idx.length < 1
         i = @getIndexEntry(msg, fromDate)
@@ -372,7 +375,8 @@ onCall =
           response.push "#{@prettyEntry(@getEntryByIndex(msg,i))}"
         else
           response.push "Schedule empty!"
-      (response.push @prettyEntry(@getEntryByIndex(msg,a)) for a in idx)
+      for a in idx
+        response.push @prettyEntry(@getEntryByIndex(msg,a)) 
       msg.reply response.join("\n")
 
     #failsafe to remove all traces of on-call schedule from robot.brain in the event of horrific failure
@@ -541,12 +545,12 @@ module.exports = (robot) ->
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
     msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people)
 
-  robot.respond /add \s*(.*)\s*to\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:thru|through|to|-)?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
+  robot.respond /add \s*(.*)\s*to\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:until|thru|through|to|[-])?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Put #{people.toString()} on-call for #{msg.match[2]} #{msg.match[3]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.union)
 
-  robot.respond /unschedule\s*(.*)\s*from\s*on[- ]call\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:thru|through|to|-)?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
+  robot.respond /unschedule\s*(.*)\s*from\s*on[- ]call\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:until|thru|through|to|[-])?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Remove #{people.toString()} from on-call for #{msg.match[2]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.difference)
@@ -554,11 +558,11 @@ module.exports = (robot) ->
 #  robot.respond /import\s*on[- ]call\s*schedule\s*from\s*(.+)/i, (msg) ->
 #    msg.robot.logger.info "Import schedule from " + msg.match[1]
 
-  robot.respond /clear\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)*\s*(?:through|thru|to|-)?\s*(\d+\/\d+\/\d\d\d\d)*\s*/i, (msg) ->
+  robot.respond /clear\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)*\s*(?:until|to|through|thru|[-])?\s*(\d+\/\d+\/\d\d\d\d)*\s*/i, (msg) ->
     msg.robot.logger.info "Clear the on-call schedule from #{msg.match[1]} to #{msg.match[2]}"
     onCall.schedule.clear(msg, msg.match[1], msg.match[2])
 
-  robot.respond /(?:export|display)\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:through|thru|-)*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+  robot.respond /(?:export|display)\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:until|to|through|thru|[-])*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     onCall.schedule.toCSV(msg, msg.match[1], msg.match[2])
 
   robot.respond /audit\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:through|thru|-)*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
