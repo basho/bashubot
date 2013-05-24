@@ -156,8 +156,8 @@ onCall =
       if (fromDate or toDate)
         start = @makeDate(fromDate)
         stop = @makeDate(toDate)
-        start = stop unless start?
-        stop = start unless stop?
+        start = stop if not start? or isNaN start
+        stop = start if not stop? or isNaN stop
         msg.robot.logger.info "\nStart: #{start}\n#{stop}\n#{util.inspect idx}"
         idx = idx.filter (entry) -> (entry["date"] >= start) and (entry["date"] <= stop)
         msg.robot.logger.info "#{util.inspect idx}"
@@ -429,18 +429,24 @@ onCall =
       if (not idx) or (idx == [])
         msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
         return
-      oldidx = @getIndexEntry msg, idx["date"] - 1000, false
       sched = @getEntryByIndex(msg, idx)
       response = ["Updating to the on-call schedule for #{@epoch2Date(epoch)}"]
-      if oldidx
-        osched = @getEntryByIndex(msg, oldidx)
-        response.push "Old schedule: #{@prettyEntry osched}"
-        oldppl = _.difference(osched["people"],sched["people"])
-      response.push "New schedule: #{@prettyEntry sched}"
+      lastapply = msg.robot.brain.get 'ocs-lastapplied'
+      if not lastapply? or lastapply < idx["date"]
+        oldidx = @getIndexEntry msg, idx["date"] - 1000, false
+        if oldidx
+          osched = @getEntryByIndex(msg, oldidx)
+          response.push "Old schedule: #{@prettyEntry osched}"
+          oldppl = _.difference(osched["people"],sched["people"])
+      if lastapply? and lastapply == idx["date"]
+        response.push "Re-applyting schedule #{sched['date']}"
+      else
+        response.push "New schedule: #{@prettyEntry sched}"
       if oldppl?
         response.push "Removing #{oldppl.toString()}"
       response.push "Adding #{sched['people'].toString()}"
       onCall.modify(msg, sched["people"], _.union)
+      msg.robot.brain.set 'ocs-lastapplied', idx["date"]
       msg.reply response.join("\n")
 
     # modify a range of schedule entries
