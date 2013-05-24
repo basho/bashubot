@@ -429,7 +429,7 @@ onCall =
       if (not idx) or (idx == [])
         msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
         return
-      oldidx = @getIndexEntry msg, idx["data"] - 1000, false
+      oldidx = @getIndexEntry msg, idx["date"] - 1000, false
       response = ["Updated to the on-call schedule for #{@epoch2Date(epoch)}"]
       if oldidx
         sched = @getEntryByIndex(msg, oldidx)
