@@ -15,17 +15,22 @@
 #   ESCALATION_NOTIFICATIONROOM
 #
 # Commands:
-#  hubot add <name>[ ,<name>...] to on-call schedule for <mm/dd/yyyy> - add people to a schedule
-#  hubot unschedule <name>[, <name>...] from on-call for <mm/dd/yyyy> - remove people from a schedule
-#  hubot clear the on-call schedule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - remove the schedule entries for dates
-#  hubot export the on-call schdeule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - list the on-call schedule in a csv text blob
-#  hubot display the on-call schdeule [for <mm/dd/yyyy>[ through <mm/dd/yyyy>]] - list the on-call schedule in a csv text blob
+#  hubot add <name>[ ,<name>...] to the on-call schedule for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>] - add people to a schedule
+#  hubot set the on-call schedule for <mm/dd/yyyy> to <name>[,<name>...] - Create a new schedule entry for date that contains only the listed names
+#  hubot unschedule <name>[, <name>...] from on-call for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>] - remove people from a schedule
+#  hubot apply the on-call schedule - [re]update the current on-call list with the schedule for today
+#  hubot clear the on-call schedule [for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>]] - remove the schedule entries for dates
+#  hubot display|show|export the on-call schdeule [for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>]] - list the on-call schedule in a csv text blob
+#  hubot display|show|export the current|next|today's|tomorrow's on-call schedule - list a single on-call schedule
+#  hubot audit the on-call schedule [for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>]] - show audit entries for schedules in the date range
+#  hubot load on-call schedule\n<CSV data> - bulk set schedules from CSV of the form <mm/dd/yyyy>,<name>[,<name>]\n - Note: does not remove any intermediate entries
+#  hubot check|fix|repair the on-call schedule index
 #  hubot who is on-call - list who is currently on-call
 #  hubot show me on-call - list who is currently on-call
 #  hubot put <name>[ ,<name>...] on-call - add people to the current on-call list
 #  hubot set on-call schedule for <mm/dd/yyyy> to <name>[,<name>...] - create a schedule entry containing only the listed names
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
-#  hubot reset on-call - resets to scheduled on-call
+#  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
 #
 # Author:
 #   Those fine folks at Basho Technologies
@@ -35,29 +40,6 @@ util = require 'util'
 cronJob = require('cron').CronJob
 HttpClient = require 'scoped-http-client'
 _ = require 'underscore'
-
-#clone is straight from the cookbook
-clone = (obj) ->
-  if not obj? or typeof obj isnt 'object'
-    return obj
-
-  if obj instanceof Date
-    return new Date(obj.getTime()) 
-
-  if obj instanceof RegExp
-    flags = ''
-    flags += 'g' if obj.global?
-    flags += 'i' if obj.ignoreCase?
-    flags += 'm' if obj.multiline?
-    flags += 'y' if obj.sticky?
-    return new RegExp(obj.source, flags) 
-
-  newInstance = new obj.constructor()
-
-  for key of obj
-    newInstance[key] = clone obj[key]
-
-  return newInstance
 
 onCall =
   testing: false
@@ -590,9 +572,9 @@ module.exports = (robot) ->
   robot.respond /set (?:the )?\s*on[- ]call \s*schedule (?:for |on )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d) \s*to \s*(.*)/, (msg) ->
     people = msg.match[2].split(",")
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
-    msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people)
+    msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people, true)
 
-  robot.respond /add \s*(.*) \s*to \s*(?:the )\s*on[- ]call \s*schedule \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+  robot.respond /add \s*(.*) \s*to \s*(?:the )?\s*on[- ]call \s*schedule \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Put #{people.toString()} on-call for #{msg.match[2]} #{msg.match[3]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.union)
