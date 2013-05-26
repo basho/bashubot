@@ -384,14 +384,17 @@ onCall =
       if lastPurge and lastPurge["date"]
         response.push "Schedule last purged #{@epoch2DateTime(lastPurge['date'])} by #{util.inspect lastPurge['user']}"
       for i in idx
-        if i["deleted"]
-          item = ["Deleted Entry for #{@epoch2Date(i['date'])}"]
-        else
-          item = [@prettyEntry(@getEntryByIndex(msg,i))]
-        for a in i["audit"]
-          u = a['user']
-          item.push "\t#{@epoch2DateTime(a['date'])}: #{a['action']} by #{if u['name'] then u['name'] else 'name missing'}(#{if u['id'] then u['id'] else '<id missing>'}) #{if u['room'] then 'in ' + u['room'] else ''}"
-        response.push item.join("\n")
+        try
+          if i["deleted"]
+            item = ["Deleted Entry for #{@epoch2Date(i['date'])}"]
+          else
+            item = [@prettyEntry(@getEntryByIndex(msg,i))]
+          for a in i["audit"]
+            u = a['user']
+            item.push "\t#{@epoch2DateTime(a['date'])}: #{a['action']} by #{if u['name'] then u['name'] else 'name missing'}(#{if u['id'] then u['id'] else '<id missing>'}) #{if u['room'] then 'in ' + u['room'] else ''}"
+          response.push item.join("\n")
+        catch error
+          response.push "Error #{util.inspect error} with index #{util.inspect idx}"
       msg.reply response.join("\n")
 
     # return the requested block of entries in CSV format
