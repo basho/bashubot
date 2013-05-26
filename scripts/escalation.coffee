@@ -343,7 +343,7 @@ onCall =
       if iDate != eDate
         return {"error":"index and entry don't match\nIndex: #{util.inspect idx}\nEntry: #{util.inspect entry}"}
       current = @getIndexEntry(msg, idx["date"], true)
-      if current?
+      if current and current['date'] and (current['date'] == idx['date'])
         idx["audit"] = _.union(current["audit"],idx["audit"])
       @insertIndex(msg,idx)
       msg.robot.brain.set "ocs-#{idx['date']}", entry
