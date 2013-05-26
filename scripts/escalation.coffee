@@ -621,6 +621,7 @@ module.exports = (robot) ->
     onCall.schedule.toCSV(msg, msg.match[1], msg.match[2])
 
   robot.respond /audit \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:through |thru |to |until )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+    msg.robot.logger.info "Display audit records #{util.inspect msg.message.user}"
     onCall.schedule.audit(msg,msg.match[1],msg.match[2])
 
   robot.respond /(?:who is|show me) on[- ]call\??/i, (msg) ->
