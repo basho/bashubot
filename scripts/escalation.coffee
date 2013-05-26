@@ -159,6 +159,12 @@ onCall =
         start = stop if not start? or isNaN start
         stop = start if not stop? or isNaN stop
         idx = idx.filter (entry) -> (entry["date"] >= start) and (entry["date"] <= stop)
+      if fromDate? and idx? and (idx.length > 0) and (idx[0]['date'] != @makeDate(fromDate))
+        i = @getIndexEntry(msg, fromDate)
+        if i and i['date']
+          idx = idx.reverse()
+          idx.push i
+          idx.reverse()
       return idx
 
     saveIndex: (msg, index) ->
@@ -189,20 +195,24 @@ onCall =
             id: "0"
             room: "backroom"
       ocsKeys = Object.keys(msg.robot.brain.data._private)
-      index = @getIndex(msg, false)
+      index = @getIndex(msg, true)
       response = ["Checking index entries:"]
       for i in index
-        if i['date']
+        if i
+          if i['date']
             if not msg.robot.brain.get "ocs-#{i['date']}"
-                i['deleted'] = true
-                i['audit'].push @newAuditEntry(fakemsg, "delete")
-                @insertIndex(msg, i)
-                response.push "Index for #{@epoch2Date(i['date'])} points to non-existent schedule entry, deleteing"
-        else
+              i['deleted'] = true
+              i['audit'].push @newAuditEntry(fakemsg, "delete")
+              @insertIndex(msg, i)
+              response.push "Index for #{@epoch2Date(i['date'])} points to non-existent schedule entry, deleteing"
+          else
             i['deleted'] = true
             i['audit'].push @newAuditEntry(fakemsg, "delete")
             @insertIndex(msg,i)
             response.push "Index entry missing date, deleting:\n #{util.inspect i}"
+        else
+          response.push "Deleting invalid index entry #{util.inspect i}"
+          @purgeIndex(msg, i)
       response.push "Checking schedule entries"
       #get a fresh index with the fixes so far applied
       index = @getIndex(msg, true)
@@ -216,7 +226,7 @@ onCall =
             if sdt != kdt
               response.push "Schedule entry date '#{sched['date']}' does not match key '#{k}', deleting"
               idx = @getIndexEntry(msg, m[1], true)
-              if idx
+              if idx?
                 @deleteEntryByIndex(msg, idx)
               else
                 msg.robot.brain.remove k
@@ -244,14 +254,20 @@ onCall =
 
     purgeIndex: (msg, idx) ->
       index = @getIndex(msg,true)
-      if idx["date"]
+      if idx and idx["date"]
         msg.robot.brain.remove "ocs-#{idx['date']}"
       @saveIndex  msg, _.difference(index,[idx])
 
     makeDate: (str) ->
       if not str instanceof String
         return str
-      dt = Date.parse(str)
+      if /today/i.test str
+        dt = (new Date).getTime()
+      else
+        if /tomorrow/i.test str
+          dt = (new Date).getTime() + 86400000
+        else
+          dt = Date.parse(str)
       if isNaN dt
         dt = parseInt(str)
       return dt
@@ -285,7 +301,7 @@ onCall =
     getNextIndexEntry: (msg, date, deletedok) ->
       index = @getIndex(msg)
       d = @makeDate(date)
-      if deleted ok
+      if deletedok
         aIndex = index.filter (entry) -> entry["date"] > d
       else
         aIndex = index.filter (entry) -> (entry["date"] > d and not entry["deleted"])
@@ -346,10 +362,10 @@ onCall =
         return "#{sched['date']},#{sched['people'].toString() if sched['people'] instanceof Array}"
 
     #import: (msg) ->
-    
+
     fromCSV: (msg) ->
       msg.robot.logger.info "Upload from CSV"
-      lines = "#{msg.message.text}".split(";")
+      lines = "#{msg.message.text}".split("\n")
       response = []
       for line in lines[1..]
         fields = line.split(",")
@@ -374,7 +390,7 @@ onCall =
           item = [@prettyEntry(@getEntryByIndex(msg,i))]
         for a in i["audit"]
           u = a['user']
-          item.push "\t#{@epoch2DateTime(a['date'])}: #{a['action']} by #{if u['name'] then u['name'] else 'name missing'}(#{if u['id'] then u['id'] else '<id missing>'}) in #{if u['room'] then u['room'] else '<room missing>'}"
+          item.push "\t#{@epoch2DateTime(a['date'])}: #{a['action']} by #{if u['name'] then u['name'] else 'name missing'}(#{if u['id'] then u['id'] else '<id missing>'}) #{if u['room'] then 'in ' + u['room'] else ''}"
         response.push item.join("\n")
       msg.reply response.join("\n")
 
@@ -389,7 +405,8 @@ onCall =
         else
           response.push "Schedule empty!"
       for a in idx
-        response.push @prettyEntry(@getEntryByIndex(msg,a)) 
+        if a? and a['date'] 
+          response.push @prettyEntry(@getEntryByIndex(msg,a)) 
       msg.reply response.join("\n")
 
     #failsafe to remove all traces of on-call schedule from robot.brain in the event of horrific failure
@@ -548,34 +565,36 @@ onCall =
 module.exports = (robot) ->
   onCall.schedule.bootstrap(robot)
 
-  # for testing only - remove prior to deployment
-  robot.hear /inspect (.*)/, (msg) ->
+  # This is extremely dangerous, but very useful while debugging
+  # It will permit anyone who can talk to the robot to execute
+  # arbitrary javascript
+  robot.respond /inspect (.*)/, (msg) ->
     eval "obj=#{msg.match[1]}"
     msg.reply "#{util.inspect obj}"
 
-  robot.respond /purge\s*(?:the )?on[- ]call schedule/, (msg) ->
+  robot.respond /purge \s*(?:the )?on[- ]call schedule$/, (msg) ->
     onCall.schedule.purge(msg)
 
-  robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index/, (msg) ->
+  robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index\s*/, (msg) ->
     onCall.schedule.checkIndex(msg)
 
-  robot.respond /load on[- ]call schedule\s*\n?(.*)/, (msg) ->
+  robot.respond /load \s*on[- ]call \s*schedule\s*\n?(.*)/, (msg) ->
     onCall.schedule.fromCSV(msg)
 
-  robot.respond /apply (?:the )?on[- ]call schedule/, (msg) ->
+  robot.respond /apply \s*(?:the )?on[- ]call \s*schedule\s*/, (msg) ->
     onCall.schedule.applySchedule(msg)
 
-  robot.respond /set (?:the)?\s*on[- ]call schedule (?:for|on)?\s*(\d+\/\d+\/\d\d\d\d) to (.*)/, (msg) ->
+  robot.respond /set (?:the )?\s*on[- ]call \s*schedule (?:for |on )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d) \s*to \s*(.*)/, (msg) ->
     people = msg.match[2].split(",")
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
     msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people)
 
-  robot.respond /add \s*(.*)\s*to\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:until|thru|through|to|[-])?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
+  robot.respond /add \s*(.*) \s*to \s*(?:the )\s*on[- ]call \s*schedule \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Put #{people.toString()} on-call for #{msg.match[2]} #{msg.match[3]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.union)
 
-  robot.respond /unschedule\s*(.*)\s*from\s*on[- ]call\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)\s*(?:until|thru|through|to|[-])?\s*(\d+\/\d+\/\d\d\d\d)?/i, (msg) ->
+  robot.respond /unschedule \s*(.*) \s*from \s*on[- ]call \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Remove #{people.toString()} from on-call for #{msg.match[2]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.difference)
@@ -583,19 +602,25 @@ module.exports = (robot) ->
 #  robot.respond /import\s*on[- ]call\s*schedule\s*from\s*(.+)/i, (msg) ->
 #    msg.robot.logger.info "Import schedule from " + msg.match[1]
 
-  robot.respond /clear\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)*\s*(?:until|to|through|thru|[-])?\s*(\d+\/\d+\/\d\d\d\d)*\s*/i, (msg) ->
+  robot.respond /clear \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:until |to |through |thru )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     msg.robot.logger.info "Clear the on-call schedule from #{msg.match[1]} to #{msg.match[2]}"
     onCall.schedule.clear(msg, msg.match[1], msg.match[2])
 
-  robot.respond /(?:export|display)\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(today|\d+\/\d+\/\d\d\d\d)?\s*(?:until|to|through|thru|[-])*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
-    if /today/i.test msg.match[1]
-      today = new Date
-      fromDate = onCall.schedule.epoch2Date(today.getTime())
+  robot.respond /(?:export|display|show) (?:the)?\s*(next|current|tomorrow[']?s?|today[']?s?) \s*on[- ]call \s*schedule\s*/i, (msg) ->
+    today = new Date
+    if /next|tomorrow/i.test msg.match[1]
+      idx = onCall.schedule.getNextIndexEntry(msg, today.getTime(), false)
     else
-      fromDate = msg.match[1]
-    onCall.schedule.toCSV(msg, fromDate, msg.match[2])
+      idx = onCall.schedule.getIndexEntry(msg, today.getTime(), false)
+    if idx? and idx['date']
+      onCall.schedule.toCSV(msg, idx['date'])
+    else
+      msg.reply "No more schedules found"
 
-  robot.respond /audit\s*(?:the)?\s*on[- ]call\s*schedule\s*(?:for|on|from)?\s*(\d+\/\d+\/\d\d\d\d)?\s*(?:through|thru|-)*\s*(\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+  robot.respond /(?:export|display|show) \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:until |to |through |thru )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+    onCall.schedule.toCSV(msg, msg.match[1], msg.match[2])
+
+  robot.respond /audit \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:through |thru |to |until )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     onCall.schedule.audit(msg,msg.match[1],msg.match[2])
 
   robot.respond /(?:who is|show me) on[- ]call\??/i, (msg) ->
