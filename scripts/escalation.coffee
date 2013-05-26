@@ -16,7 +16,7 @@
 #
 # Commands:
 #  hubot add <name>[ ,<name>...] to the on-call schedule for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>] - add people to a schedule
-#  hubot set the on-call schedule for <mm/dd/yyyy> to <name>[,<name>...] - Create a new schedule entry for date that contains only the listed names
+#  hubot set the on-call schedule for <mm/dd/yyyy> to <name>[,<name>...] - Create a schedule entry for date containing only the listed names
 #  hubot unschedule <name>[, <name>...] from on-call for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>] - remove people from a schedule
 #  hubot apply the on-call schedule - [re]update the current on-call list with the schedule for today
 #  hubot clear the on-call schedule [for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>]] - remove the schedule entries for dates
@@ -28,7 +28,6 @@
 #  hubot who is on-call - list who is currently on-call
 #  hubot show me on-call - list who is currently on-call
 #  hubot put <name>[ ,<name>...] on-call - add people to the current on-call list
-#  hubot set on-call schedule for <mm/dd/yyyy> to <name>[,<name>...] - create a schedule entry containing only the listed names
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
 #
