@@ -458,6 +458,7 @@ onCall =
         response.push "New schedule: #{@prettyEntry sched}"
       if oldppl?
         response.push "Removing #{oldppl.toString()}"
+        onCall.modify(msg,oldppl, _.difference)
       response.push "Adding #{sched['people'].toString()}"
       onCall.modify(msg, sched["people"], _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
