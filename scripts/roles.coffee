@@ -23,7 +23,7 @@ module.exports = (robot) ->
     else if name.toLowerCase() is "on-call" or name.toLowerCase() is "on call"
       # nothing
     else
-      users = robot.usersForFuzzyName(name)
+      users = robot.brain.usersForFuzzyName(name)
       if users.length is 1
         user = users[0]
         user.roles = user.roles or [ ]
@@ -42,7 +42,7 @@ module.exports = (robot) ->
 
     unless name in ['who', 'what', 'where', 'when', 'why']
       unless newRole.match(/^not\s+/i)
-        users = robot.usersForFuzzyName(name)
+        users = robot.brain.usersForFuzzyName(name)
         if users.length is 1
           user = users[0]
           user.roles = user.roles or [ ]
@@ -65,7 +65,7 @@ module.exports = (robot) ->
     newRole = msg.match[2].trim()
 
     unless name in ['who', 'what', 'where', 'when', 'why']
-      users = robot.usersForFuzzyName(name)
+      users = robot.brain.usersForFuzzyName(name)
       if users.length is 1
         user = users[0]
         user.roles = user.roles or [ ]
