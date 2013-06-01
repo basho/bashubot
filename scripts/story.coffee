@@ -722,5 +722,11 @@ story = [
 
 
 module.exports = (robot) ->
-  robot.respond /tell (?:me )a story$/i, (msg) ->
+  robot.respond /tell (?:me )?a story$/i, (msg) ->
     msg.send msg.random story
+
+  robot.respond /(?:read|say|tell|recite) (?:me )?a poem/i, (msg) ->
+    msg.send "http://poems.com/poem.php?date=" + Math.floor(((new Date).getTime() / 86400000) - (Math.random() * 360))
+
+  robot.respond /tell (?:.* )?a joke/i, (msg) ->
+    msg.send "http://dailyjokes.co/RandomLaughs.php" 
