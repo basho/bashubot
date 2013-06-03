@@ -68,7 +68,7 @@ onCall =
             if err
               msg.reply "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
-              msg.reply "Ok, I updated the on-call list."
+              msg.reply "Ok, I updated the on-call list #{newOnCall.toString()}"
               onCall.list(msg)
 
 # structure of schedule data in robot.brain
@@ -444,25 +444,25 @@ onCall =
         msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
         return
       sched = @getEntryByIndex(msg, idx)
-      response = ["Updating to the on-call schedule for #{@epoch2Date(epoch)}"]
+      msg.send "Updating to the on-call schedule for #{@epoch2Date(epoch)}"
       lastapply = msg.robot.brain.get 'ocs-lastapplied'
       if not lastapply? or lastapply < idx["date"]
         oldidx = @getIndexEntry msg, idx["date"] - 1000, false
         if oldidx
           osched = @getEntryByIndex(msg, oldidx)
-          response.push "Old schedule: #{@prettyEntry osched}"
+          msg.send "Old schedule: #{@prettyEntry osched}"
           oldppl = _.difference(osched["people"],sched["people"])
       if lastapply? and lastapply == idx["date"]
-        response.push "Re-applyting schedule #{sched['date']}"
+        msg.send "Re-applyting schedule #{sched['date']}"
       else
-        response.push "New schedule: #{@prettyEntry sched}"
-      if oldppl?
-        response.push "Removing #{oldppl.toString()}"
+        msg.send "New schedule: #{@prettyEntry sched}"
+      msg.robot.logger.info "Updating on-call from [#{oldppl.toString()}] to [#{sched['people'].toString()}]"
+      if oldppl? and oldppl.length > 0
+        msg.send "Removing #{oldppl.toString()}"
         onCall.modify(msg,oldppl, _.difference)
-      response.push "Adding #{sched['people'].toString()}"
+      msg.send "Adding #{sched['people'].toString()}"
       onCall.modify(msg, sched["people"], _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
-      msg.reply response.join("\n")
 
     # modify a range of schedule entries
     # adds an entry at the beginning of the range if necessary
