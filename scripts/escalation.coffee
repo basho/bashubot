@@ -503,12 +503,12 @@ onCall =
           response.push {"success":"Created new schedule entry for #{@epoch2Date(dFrom)}"}
       #update every pre-existing entry in the date range
       for i in idx
-        newlist = op(i["people"], people)
-        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.toString}")
         sched = @getEntryByIndex(msg, i)
+        newlist = op(sched["people"], people)
+        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.toString}")
         if sched
             sched["people"] = newlist
-            response.push @saveEntry(msg, idx, sched)
+            response.push @saveEntry(msg, i, sched)
         else
             response.push {"error":"Could not find schedule entry corresponding to index #{util.inspect idx}"}
       errors = (s["error"] for s in response when s["error"])
