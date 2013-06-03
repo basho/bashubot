@@ -72,10 +72,10 @@ onCall =
               http.get() (err,res,body) =>
                 if not err
                   diffs = _.difference(newOnCall,body.trim().split("\n"))
-                  if diffs != []
+                  if diffs.length > 0
                     msg.reply "Failed to add: #{diffs.toString()}"
                   diffs = _.difference(body.trim().split("\n"),newOnCall)
-                  if diffs != []
+                  if diffs.length > 0
                     msg.reply "Failed to remove: #{diffs.toString()}"
                 onCall.list(msg)
                  
