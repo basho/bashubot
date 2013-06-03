@@ -68,8 +68,14 @@ onCall =
             if err
               msg.reply "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
-              msg.reply "Ok, I updated the on-call list #{newOnCall.toString()}"
-              onCall.list(msg)
+              msg.reply "Ok, I updated the on-call list"
+              http.get() (err,res,body) =>
+                if not err
+                  diffs = _.difference(body.trim().split("\n"),newOnCall)
+                  if diffs != []
+                    msg.reply "Failure: On-call list was not changed"
+                onCall.list(msg)
+                 
 
 # structure of schedule data in robot.brain
 # ocs-index : [onCasllScheduleIndexEntry]
@@ -456,7 +462,7 @@ onCall =
         msg.send "Re-applyting schedule #{sched['date']}"
       else
         msg.send "New schedule: #{@prettyEntry sched}"
-      msg.robot.logger.info "Updating on-call from [#{oldppl.toString()}] to [#{sched['people'].toString()}]"
+      msg.robot.logger.info "Updating on-call Removing:[#{oldppl.toString()}] Adding:[#{sched['people'].toString()}]"
       if oldppl? and oldppl.length > 0
         msg.send "Removing #{oldppl.toString()}"
         onCall.modify(msg,oldppl, _.difference)
