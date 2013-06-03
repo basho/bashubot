@@ -467,11 +467,14 @@ onCall =
       else
         msg.send "New schedule: #{@prettyEntry sched}"
       msg.robot.logger.info "Updating on-call Removing:[#{oldppl.toString()}] Adding:[#{sched['people'].toString()}]"
+      msg.send "Removing #{oldppl.toString()}, Adding #{sched['people'].toString()}"
       if oldppl? and oldppl.length > 0
-        msg.send "Removing #{oldppl.toString()}"
         onCall.modify(msg,oldppl, _.difference)
-      msg.send "Adding #{sched['people'].toString()}"
-      onCall.modify(msg, sched["people"], _.union)
+        delaymod = () ->
+          onCall.modify(msg, sched["people"], _.union)
+        setTimeout delaymod, 5000
+      else
+        onCall.modify(msg, sched["people"], _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
 
     # modify a range of schedule entries
