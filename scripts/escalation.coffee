@@ -71,9 +71,12 @@ onCall =
               msg.reply "Ok, I updated the on-call list"
               http.get() (err,res,body) =>
                 if not err
+                  diffs = _.difference(newOnCall,body.trim().split("\n"))
+                  if diffs != []
+                    msg.reply "Failed to add: #{diffs.toString()}"
                   diffs = _.difference(body.trim().split("\n"),newOnCall)
                   if diffs != []
-                    msg.reply "Failure: On-call list was not changed"
+                    msg.reply "Failed to remove: #{diffs.toString()}"
                 onCall.list(msg)
                  
 
@@ -445,6 +448,7 @@ onCall =
     applySchedule: (msg) ->
       dt = new Date
       epoch = dt.getTime()
+      oldppl = []
       idx = @getIndexEntry msg, epoch, false
       if (not idx) or (idx == [])
         msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
