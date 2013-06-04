@@ -529,6 +529,8 @@ onCall =
         robot: robot
         reply: (text) ->
           @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
+        send: (text) ->
+          @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
       # prune old entries, keeping only 30 expired schedules
       idx = @getIndexEntry(fakemsg,epoch)
       if idx and idx['date']
