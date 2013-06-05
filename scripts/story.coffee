@@ -728,5 +728,12 @@ module.exports = (robot) ->
   robot.respond /(?:read|say|tell|recite) (?:me )?a poem/i, (msg) ->
     msg.send "http://poems.com/poem.php?date=" + Math.floor(((new Date).getTime() / 86400000) - (Math.random() * 360))
 
-  robot.respond /tell (?:.* )?a joke/i, (msg) ->
-    msg.send "http://dailyjokes.co/RandomLaughs.php" 
+  #this is just a fun way to get someone's @mention name
+  robot.respond /tell \s*([^ ].*[^ ])?\s*a joke/i, (msg) ->
+    name = msg.match[1]
+    mention = ""
+    if name
+      users = robot.brain.usersForFuzzyName(name.trim())
+      if users.length > 0 and users[0].mention_name
+        mention = "@#{users[0].mention_name} "
+    msg.send "#{mention}http://dailyjokes.co/RandomLaughs.php" 
