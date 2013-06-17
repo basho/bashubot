@@ -33,4 +33,4 @@ module.exports = (robot) ->
   robot.hear /lumberg/i, (msg) ->
     lumberg(msg, "Hey #{msg.message.user.name}, #{msg.random greetings} #{msg.random yeahs}")
 
-  robot.enter mug
+#  robot.enter mug
