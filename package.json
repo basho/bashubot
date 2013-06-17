@@ -22,7 +22,8 @@
     "hiredis":"latest",
     "optparse":"latest",
 	"cron":"latest",
-    "scoped-http-client":"0.9.7"
+    "scoped-http-client":"0.9.7",
+    "pg":"latest"
   },
 
   "engines": {
