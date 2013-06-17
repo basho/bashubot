@@ -5,6 +5,7 @@
  "shipit.coffee",
  "bees.coffee",
  "megusta.coffee",
+ "pg-brain.coffee",
  "ping.coffee",
  "achievement_unlocked.coffee",
  "remind.coffee",
