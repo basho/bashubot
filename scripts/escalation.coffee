@@ -463,17 +463,18 @@ onCall =
           msg.send "Old schedule: #{@prettyEntry osched}"
           oldppl = _.difference(osched["people"],sched["people"])
       if lastapply? and lastapply == idx["date"]
-        msg.send "Re-applyting schedule #{sched['date']}"
+        msg.send "Re-applying schedule #{sched['date']}"
       else
         msg.send "New schedule: #{@prettyEntry sched}"
       msg.robot.logger.info "Updating on-call Removing:[#{oldppl.toString()}] Adding:[#{sched['people'].toString()}]"
-      msg.send "Removing #{oldppl.toString()}, Adding #{sched['people'].toString()}"
       if oldppl? and oldppl.length > 0
+        msg.send "Removing #{oldppl.toString()}, Adding #{sched['people'].toString()}"
         onCall.modify(msg,oldppl, _.difference)
         delaymod = () ->
           onCall.modify(msg, sched["people"], _.union)
         setTimeout delaymod, 5000
       else
+        msg.send "Adding #{sched['people'].toString()}"
         onCall.modify(msg, sched["people"], _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
 
