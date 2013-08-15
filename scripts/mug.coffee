@@ -1,3 +1,11 @@
+#Description:
+#  Standard greeting with coffee
+#
+#Commands:
+#  hubot mug me - Personal greeting from hubot and Lumberg
+#  mug - same as hubot mug me
+#  lumberg - same as mug
+
 lumbergs = [
   "http://www.mamapop.com/wp-content/uploads/2010/06/bill-lumbergh-office-space1.jpg",
   "http://static8.businessinsider.com/image/437a6c79736bca485dbe6e00/office-space-lumberg.jpg",

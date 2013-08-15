@@ -1,6 +1,8 @@
-# Display a "deal with it" gif
+# Description:
+#   Display a "deal with it" gif
 #
-# deal with it - display a "deal with it" gif
+# Commands:
+#   deal with it - display a "deal with it" gif
 #
 
 deal = [

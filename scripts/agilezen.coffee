@@ -1,10 +1,20 @@
-# Interacts with kanban boards you have in AgileZen. Set the AGILEZEN_APIKEY environment variable.
+# Description:
+#   Interacts with kanban boards you have in AgileZen. Set the AGILEZEN_APIKEY environment variable.
 #
-# kanban[ me] - Lists your kanban boards by name
-# what can i pull[ from|on][ <project>] - finds ready-to-pull cards on your project
-# what is blocked[ from|on][ <project>] - finds blocked cards on your project
-# what are my [cards|stories] [from|on] [<project>] - something
-# what is up with story [<story_id>] [from|on] [<project>] - something
+# Dependencies:
+#   underscore
+#   https
+#
+# Configuration
+#   AGILEZEN_APIKEY
+#   AGILEZEN_DEFAULT_PROJECT
+#
+# Commands:
+#   kanban[ me] - Lists your kanban boards by name
+#   what can i pull[ from|on][ <project>] - finds ready-to-pull cards on your project
+#   what is blocked[ from|on][ <project>] - finds blocked cards on your project
+#   what are my [cards|stories] [from|on] [<project>] - something
+#   what is up with story [<story_id>] [from|on] [<project>] - something
 
 HTTPS = require 'https'
 _ = require 'underscore'

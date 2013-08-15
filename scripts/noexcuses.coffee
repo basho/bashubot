@@ -1,8 +1,7 @@
-# Invoke fearless leader J2 upon mention of his cherished mantra
+#Description:
+#  Invoke fearless leader J2 upon mention of his cherished mantra
 #
-# no excuses - Displays a J2 admonishment, reminding us all that:
-#
-#              THERE IS NO EXCUSES
+# no excuses - Displays a J2 admonishment, reminding us all that: THERE IS NO EXCUSES
 #
 
 j2 = [

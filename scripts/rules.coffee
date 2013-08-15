@@ -1,4 +1,8 @@
+#Description:
 # DON'T DELETE THIS SCRIPT! ALL ROBAWTS MUST KNOW THE RULES
+#
+#Commands:
+#  hubot [what are] the [3|three] (rules|laws) [of [robotic|apple|dev]
 
 rules = [
   "1. A robot may not injure a human being or, through inaction, allow a human being to come to harm.",

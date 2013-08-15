@@ -1,7 +1,10 @@
+#Description:
 # ZenDesk Linker 
-#
 # Attempts to naively build a link to a zendesk ticket whenever the
 # word ticket or request is followed with a # and a number.
+#
+#Commands:
+#  Ticket/response/review #n - link to Zendesk ticket n
 #
 #
 
