@@ -12,4 +12,5 @@ module.exports = (robot) ->
   robot.hear /(ticket|response|review)[^#]*?#\s*(\d+)/i, (msg)->
   	if msg.message.user.name isnt "Zendesk"
       ticketNum = escape(msg.match[2])
+      msg.robot.brain.set('last-ticket-mention',{"date": Date.now(),"user": msg.envelope.user.mention_name, "ticket":"#{ticketNum}"})
       msg.send "https://basho.zendesk.com/agent/#/tickets/"+ticketNum+"    "+msg.message.user.name
