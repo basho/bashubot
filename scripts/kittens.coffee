@@ -1,9 +1,10 @@
-
-# Kittens!
+#Description:
+#  Kittens!
 #
-# kitten me - A randomly selected kitten
-# kitten me <w>x<h> - A kitten of the given size
-# kitten bomb me <number> - Many many kittens!
+#Commands:
+#  hubot kitten me - A randomly selected kitten
+#  hubot kitten me <w>x<h> - A kitten of the given size
+#  hubot kitten bomb me <number> - Many many kittens!
 
 module.exports = (robot) ->
   robot.respond /kittens?(?: me)?$/i, (msg) ->

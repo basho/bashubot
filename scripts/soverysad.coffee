@@ -1,5 +1,7 @@
-# Display a sad MLP gif
+#Description:
+#  Display a sad MLP gif
 #
+#Commands:
 # so very sad - Displays a sad MLP gif
 #
 #

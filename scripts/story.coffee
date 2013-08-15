@@ -1,5 +1,7 @@
-# Inspect the data in redis easily
+#Description:
+# storytime!
 #
+#Commands:
 # hubot tell me a story
 # 
 #
