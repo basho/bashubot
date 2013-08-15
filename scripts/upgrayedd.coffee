@@ -1,7 +1,9 @@
+#Description:
 # Upgrayedd
 #
-# upgrayedd - Which he spells thusly, with two D's, as he says, "for a double dose of this pimping".
-#
+#Commands:
+# hubot upgrayedd - Which he spells thusly, with two D's, as he says, "for a double dose of this pimping".
+# upgrade
 
 upgrayedds = [
   "http://dcs905.ca/dubcomm/wp-content/uploads/2010/03/upgrayedd-575x377.jpg",
