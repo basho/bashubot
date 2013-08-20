@@ -17,5 +17,6 @@ module.exports = (robot) ->
           if ticket.date and ticket.user
             if ticket.date < Date.now() - 600
               mention = "@#{ticket.user}"
-      msg.send "#{mention} Remember to track your time!"
+          if mention != "@all"
+            msg.send "#{mention} Remember to track your time!"
 
