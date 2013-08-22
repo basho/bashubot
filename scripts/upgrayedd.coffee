@@ -6,7 +6,7 @@
 # upgrade
 
 upgrayedds = [
-  "http://dcs905.ca/dubcomm/wp-content/uploads/2010/03/upgrayedd-575x377.jpg",
+  "http://codinghorror.typepad.com/.a/6a0120a85dcdae970b01287770a775970c-pi",
   "http://b.vimeocdn.com/ps/824/82420_300.jpg"
 ]
 
