@@ -509,7 +509,7 @@ onCall =
       for i in idx
         sched = @getEntryByIndex(msg, i)
         newlist = op(sched["people"], people)
-        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.toString}")
+        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.toString()}")
         if sched
             sched["people"] = newlist
             response.push @saveEntry(msg, i, sched)
