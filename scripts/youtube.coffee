@@ -7,7 +7,7 @@
 module.exports = (robot) ->
   robot.respond /(youtube|yt)( me)? (.*)/i, (msg) ->
     query = msg.match[3]
-    msg.http("http://gdata.youtube.com/feeds/api/videos")
+    msg.robot.http("http://gdata.youtube.com/feeds/api/videos")
       .query({
         orderBy: "relevance"
         'max-results': 15

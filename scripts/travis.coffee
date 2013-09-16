@@ -8,7 +8,7 @@
 module.exports = (robot) ->
   robot.respond /travis me (.*)/i, (msg) ->
     project = escape(msg.match[1])
-    msg.http("http://travis-ci.org/#{project}.json")
+    msg.robot.http("http://travis-ci.org/#{project}.json")
       .get() (err, res, body) ->
         response = JSON.parse(body)
         if response.last_build_status == 0
