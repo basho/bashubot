@@ -48,13 +48,13 @@ onCall =
   http: () ->
     HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}:#{@password}").toString('base64') }).path("/on-call")
   list: (msg) ->
-    @http().get() (err, res, body) ->
+    msg.robot.http().get() (err, res, body) ->
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
         msg.reply ["Here's who's on-call:", body.trim().split("\n").join(", ")].join(" ")
   modify: (msg, people, op) ->
-    http = @http()
+    http = msg.robot.http()
     http.get() (err,res,body) =>
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
