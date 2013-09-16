@@ -32,8 +32,14 @@ imageMe = (msg, query, cb) ->
     .query(v: "1.0", rsz: '8', q: query, safe: 'active')
     .get() (err, res, body) ->
       images = JSON.parse(body)
-      images = images.responseData.results
-      if images.length > 0
-        image  = msg.random images
-        cb "#{image.unescapedUrl}#.png"
-
+      if images.responseData
+        images = images.responseData.results
+        if images.length > 0
+          image  = msg.random images
+          cb "#{image.unescapedUrl}#.png"
+      else
+        msg.robot.logger.info "No results found for image query #{query}"
+        msg.robot.logger.info "err: #{err}"
+        msg.robot.logger.info "res: #{res}"
+        msg.robot.logger.info "body: #{body}"
+        msg.reply "Error #{images.responseStatus} - server does not like you\nhttp://joecaswell.info/bashokit/images/562949953430569-253x253.jpg"
