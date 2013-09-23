@@ -45,16 +45,16 @@ onCall =
   url: process.env.ESCALATION_URL
   user: process.env.ESCALATION_USER
   password: process.env.ESCALATION_PASSWORD
-  http: () ->
+  httpclient: () ->
     HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}:#{@password}").toString('base64') }).path("/on-call")
   list: (msg) ->
-    msg.robot.http().get() (err, res, body) ->
+    @httpclient().get() (err, res, body) ->
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
         msg.reply ["Here's who's on-call:", body.trim().split("\n").join(", ")].join(" ")
   modify: (msg, people, op) ->
-    http = msg.robot.http()
+    http = @httpclient()
     http.get() (err,res,body) =>
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
