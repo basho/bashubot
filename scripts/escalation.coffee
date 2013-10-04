@@ -40,6 +40,107 @@ cronJob = require('cron').CronJob
 HttpClient = require 'scoped-http-client'
 _ = require 'underscore'
 
+zenDesk = 
+#
+  roles: {
+    BARCLAY:{
+        setUrl:'macros/28124595.json',
+        setData:'{"macro":{"actions":[{"field":"assignee_id","value":"%{user_id}"}]}}',
+        getUrl:'macros/28124595.json',
+        extractFun: (data) ->
+          act = JSON.parse(data).macro.actions
+          userid = -1
+          for a in act
+            if a.field == "assignee_id"
+              userid = a.value
+              break
+          return userid
+    }
+  }
+
+  url: process.env.ZENDESKAPI_URL
+  user: process.env.ZENDESKAPI_USER
+  token: process.env.ZENDESKAPI_TOKEN
+  httpClient: () ->
+    HttpClient.create(zenDesk.url, headers: { 'Authorization': 'Basic ' + new Buffer("#{zenDesk.user}/token:#{zenDesk.token}").toString('base64'), 'Accept': 'application/json', 'Content-Type': 'application/json' })
+
+  userData: (uid, msg) ->
+    (fun) ->
+      zenDesk.httpClient().path('users/' + uid + '.json').get() (err, res, body) ->
+        if err
+          msg.reply "Error retrieving user data: " + err
+        else
+          if res.statusCode == 200
+            bodydata = JSON.parse(body)
+            fun(bodydata.user)
+          else
+            msg.reply "HTTP status " + res.statusCode + " received querying user ID '" + uid + "'\n" + body
+
+  getRoleData: (role,msg) ->
+    roleData = zenDesk.roles[role.toUpperCase()]
+    if roleData instanceof Object
+      if roleData.setUrl or roleData.getUrl
+        return roleData
+      else
+        msg.reply "Invalid configuration for role '" + role + "'"
+        return null
+    else
+        msg.reply "Unknown role '" + role + "'"
+        return null
+
+  setRole: (name,role,msg) ->
+    roleData = zenDesk.getRoleData(role,msg) 
+    if roleData.setUrl and roleData.setData
+      zenDesk.parseAction(name, roleData.setData, msg) (actionData) ->
+        zenDesk.httpClient().path(roleData.setUrl).put(actionData) (err, res, body) ->
+          if err
+            msg.reply "Error setting role '" + role + "': " + err
+          else
+            if res.statusCode == 200
+              zenDesk.showRole(role,msg)
+            else
+              msg.reply "HTTP status " + res.statusCode + " received setting role '" + role + "':\n" + body
+
+  getRole: (role,msg) ->
+    (fun) ->
+      roleData = zenDesk.getRoleData(role,msg)
+      if roleData.getUrl and roleData.extractFun
+        zenDesk.httpClient().path(roleData.getUrl).get() (err, res, body) ->
+          if err
+            msg.reply "Error querying role '" + role + "': " + err
+          else
+            if res.statusCode == 200
+              fun(roleData.extractFun(body))
+            else
+              msg.reply "HTTP status " + res.statusCode + " received querying role '" + role + "'\n" + body
+      else
+        msg.reply "I don't know how to check that."
+
+  showRole: (role,msg) ->
+    zenDesk.getRole(role,msg) (userid) ->
+       zenDesk.userData(userid, msg) (data) ->
+         msg.reply data.name + " is the current '" + role + "'"
+  
+  parseAction: (user, action, msg) ->
+    (fun) ->
+      zenDesk.httpClient().path('users/search.json').query("query",'"' + user + '"').get() (err, res, body) ->
+        if err
+          msg.reply "Error searching for user '" + user + "': " + err
+        else
+          if res.statusCode == 200 
+            data = JSON.parse body
+            if data.count == 1
+              user = data.users[0]
+              parsed = action.replace(/%{user_id}/gi, user.id).replace(/%{user_name}/gi,user.name).replace(/%{user_email}/gi,user.email)
+              fun(parsed)
+            else
+              msg.reply "Found " + data.count + " results for search '" + user + "'. Please refine the query."
+          else
+            msg.reply "Received HTTP status " + res.statusCode + " searching for '" + user + "'"
+        
+
+
+
 onCall =
   testing: false
   url: process.env.ESCALATION_URL
@@ -589,6 +690,15 @@ module.exports = (robot) ->
     people = msg.match[2].split(",")
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
     msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people, true)
+
+  robot.respond /(?:show|get) \s*(?:role )?([^ ]*)/i, (msg) ->
+    zenDesk.showRole(msg.match[1], msg)
+
+  robot.respond /put \s*(.*) \s*in \s*(.*) \s*role\s*/i, (msg) ->
+    zenDesk.setRole(msg.match[1], msg.match[2], msg)
+
+  robot.respond /schedule \s*(.*) \s*in \s*(.*) \s*role \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
+    onCall.zenDeskRole(msg, msg.match[1], msg.match[2], msg.match[3], msg.match[4])
 
   robot.respond /add \s*(.*) \s*to \s*(?:the )?\s*on[- ]call \s*schedule \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
