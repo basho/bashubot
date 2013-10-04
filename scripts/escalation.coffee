@@ -30,6 +30,8 @@
 #  hubot put <name>[ ,<name>...] on-call - add people to the current on-call list
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
+#  hubot put <name> in <rolename> role
+#  hubot show <rolename> role
 #
 # Author:
 #   Those fine folks at Basho Technologies
