@@ -15,7 +15,7 @@ module.exports = (robot) ->
         ticket = msg.robot.brain.get 'last-ticket-mention'
         if ticket
           if ticket.date and ticket.user
-            if ticket.date < Date.now() - 600
+            if Date.now() - ticket.date < 600000
               mention = "@#{ticket.user}"
           if mention != "@all"
             msg.send "#{mention} Remember to track your time!"
