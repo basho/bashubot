@@ -72,7 +72,7 @@ uploadUserMan =
 module.exports = (robot) ->
   robot.um = uploadUserMan
 
-  robot.respond /(?:create|make) upload user (.*) for ticket [#]?(.*) */i, (msg) ->
+  robot.respond /(?:create|make) upload user (....*) for ticket [#]?([0-9]*) */i, (msg) ->
     uploadUserMan.userAction msg, 'Create', msg.match[1], msg.match[2]
     
   robot.respond /change password for upload user (.*) for ticket [#]?(.*) */i, (msg) ->
