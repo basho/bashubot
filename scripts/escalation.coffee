@@ -6,6 +6,7 @@
 #   util
 #   underscore
 #   scoped-http-client
+#   rolemanager.coffee
 #
 # Configuration:
 #   ESCALATION_URL
@@ -13,6 +14,7 @@
 #   ESCALATION_PASSWORD
 #   ESCALATION_CRONSCHEDULE
 #   ESCALATION_NOTIFICATIONROOM
+#   ESCALATION_CREATESCHEDROLE
 #
 # Commands:
 #  hubot add <name>[ ,<name>...] to the on-call schedule for|from <mm/dd/yyyy>[ through|thru|to|until <mm/dd/yyyy>] - add people to a schedule
@@ -30,8 +32,7 @@
 #  hubot put <name>[ ,<name>...] on-call - add people to the current on-call list
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
-#  hubot put <name> in <rolename> role - Assign user to ZenDesk role 
-#  hubot show <rolename> role - Display who is currently in the role
+#  hubot set on-call name for <fuzzy user> to <name> - set the case-sensitive name the on-call server uses for this Hipchat user
 #
 # Author:
 #   Those fine folks at Basho Technologies
@@ -42,146 +43,83 @@ cronJob = require('cron').CronJob
 HttpClient = require 'scoped-http-client'
 _ = require 'underscore'
 
-zenDesk = 
-#
-  roles: {
-    BARCLAY:{
-        setUrl:'macros/28124595.json',
-        setData:'{"macro":{"actions":[{"field":"assignee_id","value":"%{user_id}"}]}}',
-        getUrl:'macros/28124595.json',
-        extractFun: (data) ->
-          act = JSON.parse(data).macro.actions
-          userid = -1
-          for a in act
-            if a.field == "assignee_id"
-              userid = a.value
-              break
-          return userid
-    }
-  }
-
-  url: process.env.ZENDESKAPI_URL
-  user: process.env.ZENDESKAPI_USER
-  token: process.env.ZENDESKAPI_TOKEN
-  httpClient: () ->
-    HttpClient.create(zenDesk.url, headers: { 'Authorization': 'Basic ' + new Buffer("#{zenDesk.user}/token:#{zenDesk.token}").toString('base64'), 'Accept': 'application/json', 'Content-Type': 'application/json' })
-
-  userData: (uid, msg) ->
-    (fun) ->
-      zenDesk.httpClient().path('users/' + uid + '.json').get() (err, res, body) ->
-        if err
-          msg.reply "Error retrieving user data: " + err
-        else
-          if res.statusCode == 200
-            bodydata = JSON.parse(body)
-            fun(bodydata.user)
-          else
-            msg.reply "HTTP status " + res.statusCode + " received querying user ID '" + uid + "'\n" + body
-
-  getRoleData: (role,msg) ->
-    roleData = zenDesk.roles[role.toUpperCase()]
-    if roleData instanceof Object
-      if roleData.setUrl or roleData.getUrl
-        return roleData
-      else
-        msg.reply "Invalid configuration for role '" + role + "'"
-        return null
-    else
-        msg.reply "Unknown role '" + role + "'"
-        return null
-
-  setRole: (name,role,msg) ->
-    roleData = zenDesk.getRoleData(role,msg) 
-    if roleData.setUrl and roleData.setData
-      zenDesk.parseAction(name, roleData.setData, msg) (actionData) ->
-        zenDesk.httpClient().path(roleData.setUrl).put(actionData) (err, res, body) ->
-          if err
-            msg.reply "Error setting role '" + role + "': " + err
-          else
-            if res.statusCode == 200
-              zenDesk.showRole(role,msg)
-            else
-              msg.reply "HTTP status " + res.statusCode + " received setting role '" + role + "':\n" + body
-
-  getRole: (role,msg) ->
-    (fun) ->
-      roleData = zenDesk.getRoleData(role,msg)
-      if roleData.getUrl and roleData.extractFun
-        zenDesk.httpClient().path(roleData.getUrl).get() (err, res, body) ->
-          if err
-            msg.reply "Error querying role '" + role + "': " + err
-          else
-            if res.statusCode == 200
-              fun(roleData.extractFun(body))
-            else
-              msg.reply "HTTP status " + res.statusCode + " received querying role '" + role + "'\n" + body
-      else
-        msg.reply "I don't know how to check that."
-
-  showRole: (role,msg) ->
-    zenDesk.getRole(role,msg) (userid) ->
-       zenDesk.userData(userid, msg) (data) ->
-         msg.reply data.name + " is the current '" + role + "'"
-  
-  parseAction: (user, action, msg) ->
-    (fun) ->
-      zenDesk.httpClient().path('users/search.json').query("query",'"' + user + '"').get() (err, res, body) ->
-        if err
-          msg.reply "Error searching for user '" + user + "': " + err
-        else
-          if res.statusCode == 200 
-            data = JSON.parse body
-            if data.count == 1
-              user = data.users[0]
-              parsed = action.replace(/%{user_id}/gi, user.id).replace(/%{user_name}/gi,user.name).replace(/%{user_email}/gi,user.email)
-              fun(parsed)
-            else
-              msg.reply "Found " + data.count + " results for search '" + user + "'. Please refine the query."
-          else
-            msg.reply "Received HTTP status " + res.statusCode + " searching for '" + user + "'"
-        
-
-
-
 onCall =
-  testing: false
+  testing: process.env.TESTING || false
+  #placeholder - roles are defined below to permit circular references
+  roles: {} 
   url: process.env.ESCALATION_URL
   user: process.env.ESCALATION_USER
   password: process.env.ESCALATION_PASSWORD
+
+  showRole: (msg,role) ->
+    old = @getRole msg, role
+    if old.length > 0
+      @get msg, (names) ->
+        current = _.intersection old,names
+        bad = _.difference old,names
+        response="#{role} role is occupied by #{current.join ','}"
+        if bad.length > 0
+          response="#{response}\n#{bad.join ','} listed as #{role}, but not on call"
+        msg.send response
+    else
+       msg.send "Role #{role} is unoccupied"
+
+  modifyRole: (msg, role, n, op) ->
+    if n not instanceof Array
+      n = n.trim().split(',')
+    names = msg.robot.roleManager.fudgeNames msg,n,"on_call_name"
+    old = @getRole msg, role
+    current = op old, names
+    @modify msg, names, op
+    msg.robot.brain.set "role-#{role.toUpperCase()}", current
+    @showRole msg, role
+
+  getRole: (msg, role) ->
+      old = msg.robot.brain.get "role-#{role.toUpperCase()}"
+      if old not instanceof Array
+        old = []
+      return old
+
   httpclient: () ->
     HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}:#{@password}").toString('base64') }).path("/on-call")
+
   list: (msg) ->
-    @httpclient().get() (err, res, body) ->
+    @get msg, (names) -> 
+      msg.send "Here's who's on-call: #{names.join(', ')}"
+
+  get: (msg,callback) ->
+    http = @httpclient()
+    http.get() (err,res,body) ->
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
-        msg.reply ["Here's who's on-call:", body.trim().split("\n").join(", ")].join(" ")
+        callback(body.trim().split("\n"))
+
   modify: (msg, people, op) ->
     http = @httpclient()
     http.get() (err,res,body) =>
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
-        newOnCall = op(body.trim().split("\n"), people)
+        newOnCall = op(body.trim().split("\n"), msg.robot.roleManager.fudgeNames msg, people, 'on_call_name')
         #don't actually set the on-call list while testing
         if @testing
-          msg.reply "If I were allowed to set the on-call list, I would set it to: #{newOnCall.toString()}"
+          msg.reply "If I were allowed to set the on-call list, I would set it to: #{newOnCall.join ", "}"
         else
           http.header('Content-Type', 'text/plain').put(newOnCall.join("\n")) (err, res, body) ->
             if err
               msg.reply "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
-              msg.reply "Ok, I updated the on-call list"
+              msg.send "Ok, I updated the on-call list"
               http.get() (err,res,body) =>
                 if not err
                   diffs = _.difference(newOnCall,body.trim().split("\n"))
                   if diffs.length > 0
-                    msg.reply "Failed to add: #{diffs.toString()}"
+                    msg.send "Failed to add: #{diffs.toString()}"
                   diffs = _.difference(body.trim().split("\n"),newOnCall)
                   if diffs.length > 0
-                    msg.reply "Failed to remove: #{diffs.toString()}"
+                    msg.send "Failed to remove: #{diffs.toString()}"
                 onCall.list(msg)
-                 
 
 # structure of schedule data in robot.brain
 # ocs-index : [onCasllScheduleIndexEntry]
@@ -343,7 +281,7 @@ onCall =
                 idx['audit'].push @newAuditEntry(fakemsg, 'delete')
                 @insertIndex(msg, idx)
       response.push "Check complete"
-      msg.reply response.join("\n")
+      msg.send response.join("\n")
 
     purgeIndex: (msg, idx) ->
       index = @getIndex(msg,true)
@@ -352,7 +290,7 @@ onCall =
       @saveIndex  msg, _.difference(index,[idx])
 
     makeDate: (str) ->
-      if not str instanceof String
+      if typeof str is not 'string'
         return str
       if /today/i.test str
         dt = (new Date).getTime()
@@ -367,14 +305,14 @@ onCall =
 
     epoch2DateTime: (int) ->
       i = int
-      if i instanceof String
+      if typeof i is 'string'
         i = parseInt(int)
       d = new Date(i)
       return "#{d.getMonth() + 1}/#{d.getDate()}/#{d.getFullYear()} #{d.getHours()}:#{if d.getMinutes() < 10 then '0' else ''}#{d.getMinutes()}"
 
     epoch2Date: (int) ->
       i = int
-      if i instanceof String
+      if typeof i is 'string'
         i = parseInt(int)
       d = new Date(i)
       return "#{d.getMonth() + 1}/#{d.getDate()}/#{d.getFullYear()}"
@@ -467,7 +405,7 @@ onCall =
           response.push line
           msg.robot.logger.info "Upload entry #{line}"
           response.push util.inspect @createEntry(msg, dt, fields[1..], true)
-      msg.reply response.join("\n")
+      msg.send response.join("\n")
 
     # return the audit history entries for the requestd range
     audit: (msg, fromDate, toDate) ->
@@ -488,7 +426,7 @@ onCall =
           response.push item.join("\n")
         catch error
           response.push "Error #{util.inspect error} with index #{util.inspect idx}"
-      msg.reply response.join("\n")
+      msg.send response.join("\n")
 
     # return the requested block of entries in CSV format
     toCSV: (msg,fromDate,toDate) ->
@@ -503,7 +441,7 @@ onCall =
       for a in idx
         if a? and a['date'] 
           response.push @prettyEntry(@getEntryByIndex(msg,a)) 
-      msg.reply response.join("\n")
+      msg.send response.join("\n")
 
     #failsafe to remove all traces of on-call schedule from robot.brain in the event of horrific failure
     purge: (msg) ->
@@ -511,9 +449,9 @@ onCall =
         (@purgeIndex(msg,i) for i in @getIndex(msg,true))
         (msg.robot.brain.remove k for k in Object.keys(msg.robot.brain.data._private).filter (key) -> key.match(/^ocs-/))
         if @getIndex(msg,true).length == 0
-          msg.reply "Purge successful"
+          msg.send "Purge successful"
         else
-          msg.reply "Remaining index: #{util.inspect @getIndex(msg,true)}"
+          msg.send "Remaining index: #{util.inspect @getIndex(msg,true)}"
         dt = new Date
         purgeAudit =
           date: dt.getTime()
@@ -534,7 +472,7 @@ onCall =
         for a in idx
           response.push @prettyEntry(@getEntryByIndex(msg,a))
           @deleteEntryByIndex(msg,a)
-        msg.reply response.join("\n")
+        msg.send response.join("\n")
       else
         msg.reply "I couldn't find any schedule entries between #{fromDate} and #{toDate}"
 
@@ -569,17 +507,40 @@ onCall =
         msg.send "Re-applying schedule #{sched['date']}"
       else
         msg.send "New schedule: #{@prettyEntry sched}"
-      msg.robot.logger.info "Updating on-call Removing:[#{oldppl.toString()}] Adding:[#{sched['people'].toString()}]"
-      if oldppl? and oldppl.length > 0
-        msg.send "Removing #{oldppl.toString()}, Adding #{sched['people'].toString()}"
-        onCall.modify(msg,oldppl, _.difference)
-        delaymod = () ->
-          onCall.modify(msg, sched["people"], _.union)
-        setTimeout delaymod, 5000
+      removenames = []
+      removeroles = []
+      addnames = []
+      addroles = []
+      for person in oldppl
+            if m = person.match /^[ ]*([^: ]*)[ ]*:[ ]*(.*[^ ])[ ]*$/
+                removeroles.push [m[1],m[2]]
+            else
+                removenames.push person
+      for person in sched["people"]
+            if m = person.match /^[ ]*([^: ]*)[ ]*:[ ]*(.*[^ ])[ ]*$/
+                addroles.push [m[1],m[2]]
+            else
+                addnames.push person
+      msg.robot.logger.info "Updating on-call Removing:[#{removeroles.toString()},#{removenames.toString()}] Adding:[#{addroles.toString()},addnames.toString()]"
+      if removenames.length > 0
+        msg.send "Removing #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
+        if removenames.length > 0
+          onCall.modify(msg,removenames, _.difference)
+          delaymod = () ->
+            onCall.modify(msg, addnames, _.union)
+          setTimeout delaymod, 5000
       else
-        msg.send "Adding #{sched['people'].toString()}"
-        onCall.modify(msg, sched["people"], _.union)
+        msg.send "Adding #{addnames}"
+        onCall.modify(msg, addnames, _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
+      autocreate = process.env.ESCALATION_CREATESCHEDROLE
+      msg.send "Autocreate:#{autocreate}"
+      for role in removeroles
+        msg.robot.roleManager.action msg, 'unset', role[0], role[1]
+      for role in addroles
+        msg.send "Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
+        msg.robot.roleManager.createRole msg, role[0] if autocreate and not msg.robot.roleManager.isRole role[0]
+        msg.robot.roleManager.action msg, 'set', role[0], role[1] if msg.robot.roleManager.isRole role[0]
 
     # modify a range of schedule entries
     # adds an entry at the beginning of the range if necessary
@@ -666,9 +627,46 @@ onCall =
             msg.robot.brain.set "ocs-confirm-#{userid}-#{room}", {"msg":note, "time": conftime, "cmd":cmd}
         return false
 
-module.exports = (robot) ->
-  onCall.schedule.bootstrap(robot)
+onCall.roles = {
+    PICARD: 
+      show: (msg) ->
+        onCall.showRole msg, 'Picard'    
+      set: (msg,name) ->
+        onCall.modifyRole msg, 'Picard', name, _.union
+      unset: (msg,name) ->
+        onCall.modifyRole msg, 'Picard', name, _.difference
+      get: (msg, role) ->
+        (fun) ->
+          fun(onCall.getRole msg, 'Picard')
+    
+    RIKER: 
+      show: (msg) ->
+        onCall.showRole msg, 'Riker'    
+      set: (msg,name) ->
+        onCall.modifyRole msg, 'Riker', name, _.union
+      unset: (msg,name) ->
+        onCall.modifyRole msg, 'Riker', name, _.difference
+      get: (msg, role) ->
+        (fun) ->
+          fun(onCall.getRole msg, 'Riker')
+}
 
+module.exports = (robot) ->
+
+  robot.logger.info "Escalation/OnCall module loading"
+  robot.onCall = onCall
+
+  if "roleManager" of robot
+    for role of onCall.roles
+      robot.logger.info "Register #{role}: #{robot.roleManager.register(role,onCall.roles[role])}"
+  else
+    robot.logger.info "defer roles"
+    robot.roleHook ||= []
+    robot.roleHook.push (robot) ->
+      robot.logger.info "Deferred Register #{role}: #{robot.roleManager.register role, robot.onCall.roles[role]}" for own role of robot.onCall.roles
+
+  onCall.schedule.bootstrap(robot)
+  
   # This is extremely dangerous, but very useful while debugging
   # It will permit anyone who can talk to the robot to execute
   # arbitrary javascript
@@ -682,28 +680,20 @@ module.exports = (robot) ->
   robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index\s*/, (msg) ->
     onCall.schedule.checkIndex(msg)
 
-  robot.respond /load \s*on[- ]call \s*schedule\s*\n?(.*)/, (msg) ->
+  robot.respond /load \s*on[- ]call \s*schedule\s*\n?(.*)/i, (msg) ->
     onCall.schedule.fromCSV(msg)
 
-  robot.respond /apply \s*(?:the )?on[- ]call \s*schedule\s*/, (msg) ->
+  robot.respond /apply \s*(?:the )?on[- ]call \s*schedule\s*/i, (msg) ->
     onCall.schedule.applySchedule(msg)
 
-  robot.respond /set (?:the )?\s*on[- ]call \s*schedule (?:for |on )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d) \s*to \s*(.*)/, (msg) ->
+  robot.respond /set (?:the )?\s*on[- ]call \s*schedule (?:for |on )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d) \s*to \s*(.*)/i, (msg) ->
     people = msg.match[2].split(",")
     msg.robot.logger.info "Create schedule for #{msg.match[1]} - #{msg.match[2]}"
-    msg.reply util.inspect onCall.schedule.createEntry(msg, msg.match[1], people, true)
-
-  robot.respond /(?:show|get) \s*(?:role )?([^ ]*)/i, (msg) ->
-    zenDesk.showRole(msg.match[1], msg)
-
-  robot.respond /put \s*(.*) \s*in \s*(.*) \s*role\s*/i, (msg) ->
-    zenDesk.setRole(msg.match[1], msg.match[2], msg)
-
-  robot.respond /schedule \s*(.*) \s*in \s*(.*) \s*role \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
-    onCall.zenDeskRole(msg, msg.match[1], msg.match[2], msg.match[3], msg.match[4])
+    msg.send util.inspect onCall.schedule.createEntry(msg, msg.match[1], people, true)
 
   robot.respond /add \s*(.*) \s*to \s*(?:the )?\s*on[- ]call \s*schedule \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
+    msg.robot.logger.info "#{msg.match[2]}: #{typeof msg.match[2]}"
     msg.robot.logger.info "Put #{people.toString()} on-call for #{msg.match[2]} #{msg.match[3]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.union)
 
@@ -711,9 +701,6 @@ module.exports = (robot) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Remove #{people.toString()} from on-call for #{msg.match[2]}"
     onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.difference)
-
-#  robot.respond /import\s*on[- ]call\s*schedule\s*from\s*(.+)/i, (msg) ->
-#    msg.robot.logger.info "Import schedule from " + msg.match[1]
 
   robot.respond /clear \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:until |to |through |thru )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     msg.robot.logger.info "Clear the on-call schedule from #{msg.match[1]} to #{msg.match[2]}"
@@ -756,3 +743,5 @@ module.exports = (robot) ->
     onCall.modify(msg, [""], _.intersection)
     onCall.schedule.applySchedule(msg)
 
+  robot.respond /set (?:on[- ]call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
+    msg.robot.roleManager.mapUserName(msg,'on_call_name',msg.match[1],msg.match[2])

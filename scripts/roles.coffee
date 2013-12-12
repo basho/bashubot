@@ -1,6 +1,9 @@
 #Description:
 # Assign roles to people you're chatting with
 #
+#Dependencies
+# rolemanager.coffee
+#
 #Commands:
 #   hubot <user> is a badass guitarist - assign a role to a user
 #   hubot <user> is not a badass guitarist - remove a role from a user
@@ -22,7 +25,7 @@ module.exports = (robot) ->
       msg.send "Who ain't I?"
     else if name is robot.name
       msg.send "The best."
-    else if name.toLowerCase() is "on-call" or name.toLowerCase() is "on call"
+    else if name.toLowerCase() is "on-call" or name.toLowerCase() is "on call" or msg.robot.roleManager.isRole(name)
       # nothing
     else
       users = robot.brain.usersForFuzzyName(name)
