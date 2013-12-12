@@ -177,12 +177,14 @@ roleManager = {
     if @isRole(role)
       rolename = role.toUpperCase()
       dynroles = msg.robot.brain.get "dynamic_roles"
-      if rolename in dynroles
+      for role in dynroles
+        targetrole = role if role.toUpperCase() == rolename
+      if targetrole
         names = msg.robot.brain.get "role-" + rolename
         names = [] unless names instanceof Array
         if names.length is 0 or force
           msg.robot.brain.remove "role-" + rolename
-          msg.robot.brain.set "dynamic_roles", _.difference dynroles, rolename
+          msg.robot.brain.set "dynamic_roles", _.difference dynroles, targetrole
           delete @roles[rolename]
           msg.send "Deleted role #{role}"
         else
