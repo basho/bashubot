@@ -56,32 +56,35 @@ roleManager = {
           msg.reply "Unknown role '#{role}'"
           return false
 
-    action: (msg, act, role, name) ->
+    action: (msg, act, role, arg) ->
       #some external APIs have aggrtessive rate limits
       #so limit to 1 role action every 5 seconds
-      if last = msg.robot.brain.get("LastRoleChange")
+      if last = msg.robot.brain.get "LastRoleChange" 
+        last = parseInt(last)
+      else
         last = 0
       now = Date.now()
       if now - last > 5000
         if roleData = @getRoleData msg, role 
           if roleData[act]
-              msg.robot.brain.set("LastRoleChange",Date.now())
-              roleData[act] msg, name 
+              if last < now
+                msg.robot.brain.set "LastRoleChange", now
+              roleData[act] msg, arg 
           else
               msg.reply "Unkown method '#{act}' for role '#{role}'"
       else
         delay = last + 5000 - now
-        msg.reply "Schedule #{act} #{role} #{name} in #{delay} ms"
-        delaymod = () ->
-          msg.reply "#{act} #{role} #{name}"
-          msg.robot.roleManager.action(msg,act,role,name);
-        setTimeout delaymod, delay
+        msg.robot.logger.info "Schedule #{act} #{role} in #{delay} ms"
+        delayact = () =>
+          msg.robot.logger.info "Re-send #{act} #{role}"
+          @action msg, act, role, arg
+        setTimeout delayact, delay
 
     isRole: (role) -> @roles.hasOwnProperty role.toUpperCase()
 
     showAllRoles: (msg) ->
       for own r,roleData of @roles
-          roleData.show msg
+          @action msg, 'show', r
 
     fudgeNames: (msg,names,field) ->
       mapUsers = (users,name,step) ->
@@ -167,8 +170,7 @@ roleManager = {
           @simpleModify(msg, role, name, _.union)
         unset: (msg, name) =>
           @simpleModify(msg, role, name, _.difference)
-        get: (msg) ->
-          (fun) ->
+        get: (msg, fun) ->
             fun msg.robot.brain.get "role-" + rolename 
         clear: (msg) ->
           msg.robot.brain.set "role-" + rolename, []
@@ -176,7 +178,7 @@ roleManager = {
       dynroles =  _.union dynroles, role
       msg.robot.brain.set "dynamic_roles", dynroles
       msg.robot.brain.set("role-#{rolename}", []) unless msg.robot.brain.get("role-#{rolename}") instanceof Array
-      msg.send "Created role #{rolename} - occupied by #{@action(msg, 'get', role) (data) -> data}"
+      msg.send "Created role #{rolename} - occupied by #{@action(msg, 'get', role, (data) -> data)}"
 
   restrictRole: (msg, role) ->
     rolename = role.toUpperCase()
@@ -201,15 +203,16 @@ roleManager = {
         else
           name = ""
         msg.robot.logger.info "Set restricted role '#{role}' to '#{name}' by '#{msg.message.user.name}'" 
-        if name is "Me" or name is "me" or name is "ME" or name.toUpperCase() is msg.message.user.name.toUpperCase()
-          @action(msg, 'get', role) (data) =>
+        # restricted role can only be assumed by self, or set via schedule
+        if name is "Me" or name is "me" or name is "ME" or name.toUpperCase() is msg.message.user.name.toUpperCase() or msg.scheduler=true
+          @action msg, 'get', role, (data) =>
             if data.length > 0
               @action msg, 'oldunset', role, data
             @action msg, 'oldset', role, name
         else
           msg.reply "#{role} is restricted, you may only set it as 'me'"
       @roles[rolename].show =  (msg) =>
-        @action(msg, 'get', role) (data) ->
+        @action msg, 'get', role, (data) ->
           if data.length > 0
             msg.send "Restricted role '#{role}' occupied by #{data.join ", "}"
           else
@@ -340,7 +343,7 @@ module.exports = (robot) ->
   robot.respond /summon \s*([^ ]*)\s*/i, (msg) ->
     role = msg.match[1]
     if roleManager.isRole role
-      roleManager.action(msg, 'get', role) (names) ->
+      roleManager.action msg, 'get', role, (names) ->
         names = [] unless names instanceof Array
         if names.length > 0
           ids = msg.robot.roleManager.fudgeNames msg,names,'id'
