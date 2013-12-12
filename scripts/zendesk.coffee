@@ -210,16 +210,17 @@ module.exports = (robot) ->
   robot.zenDesk = zenDesk
 
   robot.logger.info "Zendesk role module loading"
-  if "roleManager" of robot
-    for role of zenDesk.roles
-      robot.logger.info "Register #{role}: #{robot.roleManager.register(role,zenDesk.roles[role])}"
-  else
-    robot.logger.info "defer roles"
-    robot.roleHook ||= []
-    robot.roleHook.push (robot) =>
-      for role of robot.zenDesk.roles
-        roleData = robot.zenDesk.roles[role]
-        robot.logger.info "#{role}: #{robot.roleManager.register role, roleData}"
+  robot.brain.once "loaded", () =>
+    if "roleManager" of robot
+      for role of zenDesk.roles
+        robot.logger.info "Register #{role}: #{robot.roleManager.register(role,zenDesk.roles[role])}"
+    else
+      robot.logger.info "defer roles"
+      robot.roleHook ||= []
+      robot.roleHook.push (robot) =>
+        for role of robot.zenDesk.roles
+          roleData = robot.zenDesk.roles[role]
+          robot.logger.info "#{role}: #{robot.roleManager.register role, roleData}"
   
   robot.respond /set zendesk id for (.*) to (.*)$/i, (msg) ->
     msg.robot.roleManager.mapUserName(msg,'zendesk_id',msg.match[1],msg.match[2])
