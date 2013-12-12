@@ -25,11 +25,10 @@ cp = require 'child_process'
 uploadUserMan = 
   user: process.env.UPLOAD_USER
   host: process.env.UPLOAD_HOST
-  rawkey: process.env.UPLOAD_KEY
   home: process.env.UPLOAD_HOME
   keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
   writeKey: (msg, fun) ->
-    response = cp.exec "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{@rawkey}' > #{@keyfile}; chmod 600 #{@keyfile}\"", (error, stdout, stderr) ->
+    response = cp.exec "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\"", (error, stdout, stderr) ->
       if error
         msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
       else
