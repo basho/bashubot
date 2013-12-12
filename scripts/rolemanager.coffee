@@ -168,7 +168,7 @@ roleManager = {
         clear: (msg) ->
           msg.robot.brain.set "role-" + rolename, []
       }
-      dynroles.push rolename
+      dynroles =  _.union dynroles, role
       msg.robot.brain.set "dynamic_roles", dynroles
       msg.robot.brain.set("role-#{rolename}", []) unless msg.robot.brain.get("role-#{rolename}") instanceof Array
       msg.send "Created role #{rolename} - occupied by #{@action(msg, 'get', role) (data) -> data}"
@@ -213,13 +213,15 @@ roleManager = {
         robot: robot
       }
       for role in dynroles
+        robot.logger.info "Load dynamic role '#{role}'"
         @createRole dummy, role
 }
 
 module.exports = (robot) ->
   robot.logger.info "Loading role manager"
   robot.roleManager = roleManager
-  roleManager.loadRoles(robot)
+  robot.brain.once "loaded", =>
+    roleManager.loadRoles(robot)
 
   if "roleHook" of robot
     if robot.roleHook instanceof Array
