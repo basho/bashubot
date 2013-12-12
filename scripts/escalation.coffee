@@ -649,6 +649,7 @@ onCall =
 
 onCall.roles = {
     PICARD: 
+      name: "Picard"
       show: (msg) ->
         onCall.showRole msg, 'Picard'    
       set: (msg,name) ->
@@ -660,6 +661,7 @@ onCall.roles = {
           fun(onCall.getRole msg, 'Picard')
     
     RIKER: 
+      name: "Riker"
       show: (msg) ->
         onCall.showRole msg, 'Riker'    
       set: (msg,name) ->

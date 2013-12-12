@@ -20,6 +20,7 @@
 #   hubot (delete|destroy) empty roles - remove unoccupied dynamically added roles
 #   hubot restrict role <role> - disable removing, permit only setting 'me'
 #   hubot unrestrict role <role> - revert restricted role to its previous state
+#   hubot list roles - show all roles names
 #
 util = require 'util'
 _ = require 'underscore'
@@ -74,9 +75,7 @@ roleManager = {
               msg.reply "Unkown method '#{act}' for role '#{role}'"
       else
         delay = last + 5000 - now
-        msg.robot.logger.info "Schedule #{act} #{role} in #{delay} ms"
         delayact = () =>
-          msg.robot.logger.info "Re-send #{act} #{role}"
           @action msg, act, role, arg
         setTimeout delayact, delay
 
@@ -85,6 +84,11 @@ roleManager = {
     showAllRoles: (msg) ->
       for own r,roleData of @roles
           @action msg, 'show', r
+
+    listRoles: (msg) ->
+      rolelist = _.map @roles, (n,r) =>
+                     @roles[r].name || r
+      msg.send "Named roles: #{rolelist.join(", ")}"
 
     fudgeNames: (msg,names,field) ->
       mapUsers = (users,name,step) ->
@@ -160,6 +164,7 @@ roleManager = {
       dynroles = msg.robot.brain.get("dynamic_roles")
       dynroles = [] unless dynroles instanceof Array
       @register rolename, {
+        name: role
         show: (msg)=>
           names = msg.robot.brain.get "role-" + rolename
           if names.length > 0
@@ -327,6 +332,9 @@ module.exports = (robot) ->
   
   robot.respond /unrestrict role ([^ ]*)$/i, (msg) ->
     roleManager.unrestrictRole msg, msg.match[1]
+
+  robot.respond /list roles/i, (msg) ->
+    roleManager.listRoles(msg)
 
   robot.respond /(?:who is|show(?: me)?) (all roles|named roles|[^ ]*)\??/i, (msg) ->
     if msg.match[1] is "all roles" or msg.match[1] is "named roles"
