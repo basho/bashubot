@@ -486,7 +486,17 @@ onCall =
       @cronjob.start()
 
     # locate the schedule entry for today and change who is on-call
-    applySchedule: (msg) ->
+    applySchedule: (realmsg) ->
+      msg = {
+        robot: realmsg.robot
+        reply: realmsg.reply
+        message: realmsg.message
+        envelope: realmsg.envelope
+        send: () ->
+          true
+        scheduler: true
+      }
+      response = []
       dt = new Date
       epoch = dt.getTime()
       oldppl = []
@@ -521,26 +531,36 @@ onCall =
                 addroles.push [m[1],m[2]]
             else
                 addnames.push person
-      msg.robot.logger.info "Updating on-call Removing:[#{removeroles.toString()},#{removenames.toString()}] Adding:[#{addroles.toString()},addnames.toString()]"
+      msg.robot.logger.info "Updating on-call Removing:[#{removeroles},#{removenames}] Adding:[#{addroles},#{addnames}]"
       if removenames.length > 0
-        msg.send "Removing #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
+        response.push "Remove #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
         if removenames.length > 0
           onCall.modify(msg,removenames, _.difference)
           delaymod = () ->
             onCall.modify(msg, addnames, _.union)
-          setTimeout delaymod, 5000
+          setTimeout delaymod, 2500
       else
-        msg.send "Adding #{addnames}"
+        response.push "Add #{addnames}"
         onCall.modify(msg, addnames, _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
       autocreate = process.env.ESCALATION_CREATESCHEDROLE
-      msg.send "Autocreate:#{autocreate}"
       for role in removeroles
+        response.push "Remove Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
         msg.robot.roleManager.action msg, 'unset', role[0], role[1]
       for role in addroles
-        msg.send "Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
+        response.push "Add Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
         msg.robot.roleManager.createRole msg, role[0] if autocreate and not msg.robot.roleManager.isRole role[0]
         msg.robot.roleManager.action msg, 'set', role[0], role[1] if msg.robot.roleManager.isRole role[0]
+      # allow 5 seconds per role change + 15 seconds to allow update to apply before listing results
+      response = response.join "\n"
+      delayResult = () =>
+        realmsg.send "on-call schedule application complete."
+        realmsg.send response
+        onCall.list realmsg
+        realmsg.robot.roleManager.showAllRoles realmsg
+      delayms = 5000 * (removeroles.length + addroles.length + 3)
+      realmsg.send "Applying all on-call and role changes expected to take #{('00' + Math.floor delayms / 60000).slice -2}m #{('00' + delayms % 60000).slice -2}s"
+      setTimeout delayResult, delayms
 
     # modify a range of schedule entries
     # adds an entry at the beginning of the range if necessary
