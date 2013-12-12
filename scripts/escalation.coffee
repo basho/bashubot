@@ -655,17 +655,18 @@ module.exports = (robot) ->
 
   robot.logger.info "Escalation/OnCall module loading"
   robot.onCall = onCall
+  
+  robot.brain.once "loaded", () =>
+   if "roleManager" of robot
+     for role of onCall.roles
+       robot.logger.info "Register #{role}: #{robot.roleManager.register(role,onCall.roles[role])}"
+   else
+     robot.logger.info "defer roles"
+     robot.roleHook ||= []
+     robot.roleHook.push (robot) ->
+       robot.logger.info "Deferred Register #{role}: #{robot.roleManager.register role, robot.onCall.roles[role]}" for own role of robot.onCall.roles
+   onCall.schedule.bootstrap(robot)
 
-  if "roleManager" of robot
-    for role of onCall.roles
-      robot.logger.info "Register #{role}: #{robot.roleManager.register(role,onCall.roles[role])}"
-  else
-    robot.logger.info "defer roles"
-    robot.roleHook ||= []
-    robot.roleHook.push (robot) ->
-      robot.logger.info "Deferred Register #{role}: #{robot.roleManager.register role, robot.onCall.roles[role]}" for own role of robot.onCall.roles
-
-  onCall.schedule.bootstrap(robot)
   
   # This is extremely dangerous, but very useful while debugging
   # It will permit anyone who can talk to the robot to execute
