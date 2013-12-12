@@ -14,7 +14,12 @@
 #   hubot remove <name> from <role> role - remove name from role
 #   hubot summon <role> - summon role occupants by mention name
 #   hubot (who is|show [me]) <role> - show occupant of role
-#   hubot create role <role> - create a role for tracking/summoning, no integration with external APIs
+#   hubot (add|create) role <role> - create a role for tracking/summoning, no integration with external APIs
+#   hubot (delete|destroy) role <role> - remove dynamically added role
+#   hubot force (delete|destroy) role <role> - remove dynamically added role - even if occupied
+#   hubot (delete|destroy) empty roles - remove unoccupied dynamically added roles
+#   hubot restrict role <role> - disable removing, permit only setting 'me'
+#   hubot unrestrict role <role> - revert restricted role to its previous state
 #
 util = require 'util'
 _ = require 'underscore'
@@ -39,7 +44,7 @@ roleManager = {
         return false
      roles: {}
 
-    getRoleData: (role,msg) ->
+    getRoleData: (msg, role) ->
       roleData = @roles[role.toUpperCase()]
       if roleData instanceof Object
         if roleData.show and roleData.set and roleData.unset
@@ -58,7 +63,7 @@ roleManager = {
         last = 0
       now = Date.now()
       if now - last > 5000
-        if roleData = @getRoleData role, msg 
+        if roleData = @getRoleData msg, role 
           if roleData[act]
               msg.robot.brain.set("LastRoleChange",Date.now())
               roleData[act] msg, name 
@@ -173,6 +178,66 @@ roleManager = {
       msg.robot.brain.set("role-#{rolename}", []) unless msg.robot.brain.get("role-#{rolename}") instanceof Array
       msg.send "Created role #{rolename} - occupied by #{@action(msg, 'get', role) (data) -> data}"
 
+  restrictRole: (msg, role) ->
+    rolename = role.toUpperCase()
+    if not @isRole rolename
+      @createRole msg,role
+    restroles = msg.robot.brain.get "restricted_roles"
+    restroles = [] unless restroles instanceof Array
+    msg.robot.brain.set "restricted_roles", _.union restroles, role
+    roleData = @getRoleData msg, rolename
+    if roleData.restricted
+        msg.reply "Role '#{role}' is already restricted"
+    else
+      roleData.restricted = true
+      roleData.oldset = roleData.set
+      roleData.oldunset = roleData.unset
+      roleData.oldshow = roleData.show
+      roleData.unset = (msg) ->
+        msg.reply "#{role} is a restricted role, it cannot be unset"
+      roleData.set = (msg, name) =>
+        if typeof name is 'string'
+          name = @fudgeNames(msg, [name])[0]
+        else
+          name = ""
+        msg.robot.logger.info "Set restricted role '#{role}' to '#{name}' by '#{msg.message.user.name}'" 
+        if name is "Me" or name is "me" or name is "ME" or name.toUpperCase() is msg.message.user.name.toUpperCase()
+          @action(msg, 'get', role) (data) =>
+            if data.length > 0
+              @action msg, 'oldunset', role, data
+            @action msg, 'oldset', role, name
+        else
+          msg.reply "#{role} is restricted, you may only set it as 'me'"
+      @roles[rolename].show =  (msg) =>
+        @action(msg, 'get', role) (data) ->
+          if data.length > 0
+            msg.send "Restricted role '#{role}' occupied by #{data.join ", "}"
+          else
+            msg.reply "Restricted role '#{data}' unoccupied"
+
+  unrestrictRole: (msg, role) ->
+    rolename = role.toUpperCase()
+    if roledata = @getRoleData msg, role
+      if "oldset" of roledata and "oldunset" of roledata and "oldshow" of roledata
+        roledata.set = roledata.oldset
+        roledata.unset = roledata.oldunset
+        roledata.show = roledata.oldshow
+        delete roledata.restricted
+        delete roledata.oldset
+        delete roledata.oldunset
+        delete roledata.oldshow
+        restroles = msg.robot.brain.get "restricted_roles"
+        restroles = [] unless restroles instanceof Array
+        for r in restroles
+          remove = [] 
+          if r.toUpperCase() == rolename
+            msg.send "Removing role '#{r}' from restricted list"
+            remove.push r 
+        msg.robot.brain.set "restricted_roles", _.difference restroles, remove
+      else
+        msg.reply "Unable to unrestrict role '#{role}' - old data not available"
+
+
   deleteRole: (msg, role, force) ->
     if @isRole(role)
       rolename = role.toUpperCase()
@@ -205,18 +270,33 @@ roleManager = {
     msg.send "Removed roles #{_.difference(dynroles,newroles).join ", "}" if dynroles.length isnt newroles.length
 
   loadRoles: (robot) ->
+    dummy = {
+      reply: (m) ->
+        return
+      send: (m) ->
+        return
+      robot: robot
+    }
+
     dynroles = robot.brain.get("dynamic_roles")
     if dynroles instanceof Array
-      dummy = {
-        reply: (m) ->
-          return
-        send: (m) ->
-          return
-        robot: robot
-      }
-      for role in dynroles
-        robot.logger.info "Load dynamic role '#{role}'"
-        @createRole dummy, role
+     for role in dynroles
+        if typeof role is 'string'
+          robot.logger.info "Load dynamic role '#{role}'"
+          @createRole dummy, role 
+        else
+          robot.logger.info "Remove invalid dynamic role '#{role}'"
+          robot.brain.set "dynamic_roles", _.difference restroles, role
+
+    restroles = robot.brain.get("restricted_roles")
+    if restroles instanceof Array
+      for role in restroles
+        if typeof role is 'string'
+          robot.logger.info "Restrict role '#{role}'"
+          @restrictRole dummy, role 
+        else
+          robot.logger.info "Remove invalid dynamic restricted role '#{role}'"
+          robot.brain.set "restricted_roles", _.difference restroles, role
 }
 
 module.exports = (robot) ->
@@ -224,21 +304,27 @@ module.exports = (robot) ->
   robot.roleManager = roleManager
   robot.brain.once "loaded", =>
     roleManager.loadRoles(robot)
-
-  if "roleHook" of robot
-    if robot.roleHook instanceof Array
-      robot.logger.info "Deferred role registraion"
-      hook(robot) for own hook in robot.roleHook
-      delete robot.roleHook
+    if "roleHook" of robot
+      if robot.roleHook instanceof Array
+        robot.logger.info "Deferred role registraion"
+        hook(robot) for own hook in robot.roleHook
+        delete robot.roleHook
 
   robot.respond /create role ([^ ]*) *$/i, (msg) ->
     roleManager.createRole msg, msg.match[1]
 
-  robot.respond /(?:delete|destroy) role ([^ ]*) *$/i, (msg) ->
-    roleManager.deleteRole msg, msg.match[1]
+  robot.respond /(force)\s*(?:delete|destroy) role ([^ ]*) *$/i, (msg) ->
+    roleManager.deleteRole msg, msg.match[2], msg.match[1]
 
   robot.respond /(?:delete|destroy) empty roles? *$/i, (msg) ->
     roleManager.deleteEmpty(msg)
+
+  robot.respond /restrict role ([^ ]*)$/i, (msg) ->
+    roleManager.restrictRole msg, msg.match[1]
+  
+  robot.respond /unrestrict role ([^ ]*)$/i, (msg) ->
+    roleManager.unrestrictRole msg, msg.match[1]
+
   robot.respond /(?:who is|show(?: me)?) (all roles|named roles|[^ ]*)\??/i, (msg) ->
     if msg.match[1] is "all roles" or msg.match[1] is "named roles"
       roleManager.showAllRoles msg
