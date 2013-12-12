@@ -1,11 +1,11 @@
-#Description:
+#description:
 # plusbang - randomly nag to track time when +1 is seen
 #
-#Commands:
+#commands:
 # +1/+! - 20% chance of nag
 
 module.exports = (robot) ->
-  robot.respond /plus(1|one|bang) (date )*check/, (msg) ->
+  robot.respond /plus(1|one|bang) (date )*check/i, (msg) ->
     ticket = msg.robot.brain.get 'last-ticket-mention'
     if "date" of ticket
         msg.reply "Last ticket link: epoch:#{ticket.date} User:#{ticket.user} Ticket:#{ticket.ticket}"
