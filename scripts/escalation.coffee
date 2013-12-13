@@ -33,6 +33,7 @@
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
 #  hubot set on-call name for <fuzzy user> to <name> - set the case-sensitive name the on-call server uses for this Hipchat user
+#  hubot update the on-call schedule from google docs
 #
 # Author:
 #   Those fine folks at Basho Technologies
@@ -414,7 +415,7 @@ onCall =
         method: "post"
         data: {date: "#{dt}", data: "#{data}", id: "#{docid}", range: "#{process.env.ESCALATION_GOOGLEDOC_RANGE}", sheet: "#{process.env.ESCALATION_GOOGLEDOC_SHEET}"}
       }
-
+      msg.send "Requesting schedule"
       api.do_request request, (err, res, body) ->
         if err
           msg.reply "Error retrieving schedule: #{err}"
@@ -565,35 +566,33 @@ onCall =
             else
                 addnames.push person
       msg.robot.logger.info "Updating on-call Removing:[#{removeroles},#{removenames}] Adding:[#{addroles},#{addnames}]"
+      for role in removeroles
+        response.push "Remove Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
+        msg.robot.roleManager.action msg, 'unset', role[0], role[1]
       if removenames.length > 0
         response.push "Remove #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
         if removenames.length > 0
           onCall.modify(msg,removenames, _.difference)
           delaymod = () ->
             onCall.modify(msg, addnames, _.union)
-          setTimeout delaymod, 2500
+          setTimeout delaymod, 1000
       else
         response.push "Add #{addnames}"
         onCall.modify(msg, addnames, _.union)
       msg.robot.brain.set 'ocs-lastapplied', idx["date"]
       autocreate = process.env.ESCALATION_CREATESCHEDROLE
-      for role in removeroles
-        response.push "Remove Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
-        msg.robot.roleManager.action msg, 'unset', role[0], role[1]
       for role in addroles
         response.push "Add Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
         msg.robot.roleManager.createRole msg, role[0] if autocreate and not msg.robot.roleManager.isRole role[0]
         msg.robot.roleManager.action msg, 'set', role[0], role[1] if msg.robot.roleManager.isRole role[0]
-      # allow 5 seconds per role change + 15 seconds to allow update to apply before listing results
+      # allow 30 seconds to allow update to apply before listing results
       response = response.join "\n"
       delayResult = () =>
         realmsg.send "on-call schedule application complete."
         realmsg.send response
         onCall.list realmsg
         realmsg.robot.roleManager.showAllRoles realmsg
-      delayms = 5000 * (removeroles.length + addroles.length + 3)
-      realmsg.send "Applying all on-call and role changes expected to take #{('00' + Math.floor delayms / 60000).slice -2}m #{('00' + delayms % 60000).slice -2}s"
-      setTimeout delayResult, delayms
+      setTimeout delayResult, 30000
 
     # modify a range of schedule entries
     # adds an entry at the beginning of the range if necessary
@@ -683,6 +682,7 @@ onCall =
 onCall.roles = {
     PICARD: 
       name: "Picard"
+      ratelimit: 2500
       show: (msg) ->
         onCall.showRole msg, 'Picard'    
       set: (msg,name) ->
@@ -695,6 +695,7 @@ onCall.roles = {
     
     RIKER: 
       name: "Riker"
+      ratelimit: 2500
       show: (msg) ->
         onCall.showRole msg, 'Riker'    
       set: (msg,name) ->
@@ -802,5 +803,5 @@ module.exports = (robot) ->
   robot.respond /set (?:on[- ]call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
     msg.robot.roleManager.mapUserName(msg,'on_call_name',msg.match[1],msg.match[2])
 
-  robot.respond /update on-call schedule from google( docs*)*/i, (msg) ->
+  robot.respond /update(?: the)* on[ -]call schedule from google(?: docs*)*/i, (msg) ->
     onCall.schedule.remoteSchedule(msg)

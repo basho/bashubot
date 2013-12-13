@@ -39,6 +39,7 @@ roleManager = {
 
     register: (name,data) ->
       if "show" of data and "set" of data and "unset" of data and "get" of data
+        data.ratelimit = 0 unless "ratelimit" of data 
         roleManager.roles[name] = data
         return true
       else 
@@ -65,19 +66,19 @@ roleManager = {
       else
         last = 0
       now = Date.now()
-      if now - last > 5000
-        if roleData = @getRoleData msg, role 
+      if roleData = @getRoleData msg, role 
+        if now - last > roleData.ratelimit
           if roleData[act]
-              if last < now
+              if last < now and roleData.ratelimit > 0
                 msg.robot.brain.set "LastRoleChange", now
               roleData[act] msg, arg 
           else
               msg.reply "Unkown method '#{act}' for role '#{role}'"
-      else
-        delay = last + 5000 - now
-        delayact = () =>
-          @action msg, act, role, arg
-        setTimeout delayact, delay
+        else
+          delay = last + roleData.ratelimit - now
+          delayact = () =>
+            @action msg, act, role, arg
+          setTimeout delayact, delay
 
     isRole: (role) -> @roles.hasOwnProperty role.toUpperCase()
 
@@ -321,7 +322,7 @@ module.exports = (robot) ->
   robot.respond /create role ([^ ]*) *$/i, (msg) ->
     roleManager.createRole msg, msg.match[1]
 
-  robot.respond /(force)\s*(?:delete|destroy) role ([^ ]*) *$/i, (msg) ->
+  robot.respond /(force)*\s*(?:delete|destroy) role ([^ ]*) *$/i, (msg) ->
     roleManager.deleteRole msg, msg.match[2], msg.match[1]
 
   robot.respond /(?:delete|destroy) empty roles? *$/i, (msg) ->
