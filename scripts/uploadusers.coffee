@@ -29,21 +29,8 @@ uploadUserMan =
   home: process.env.UPLOAD_HOME
   keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
 
-  writeKey: (msg, fun) ->
-    msg.robot.logger.info util.inspect @keyfile
-    fs.exists @keyfile, (ex) =>
-      if not ex
-        fs.open @keyfile,'w',0o0600, (error,fd) =>
-          if error
-            msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
-          else
-            fd.write process.env.UPLOAD_KEY
-            fs.closeSync(fd)
-            if fun
-              fun()
-
   userAction: (msg, cmd, name, ticket) ->
-    @writeKey msg, () =>
+      fs.writeFileSync "#{@keyfile}","#{process.env.UPLOAD_KEY}"
       msg.robot.logger.info "cp.spawn \"ssh\", [\"-i\",@keyfile,\"#{@user}@#{@host}\"]"
       stream = cp.spawn "ssh", ["-i",@keyfile,"#{@user}@#{@host}"]
       stream.stdout.on "data", (data) ->
