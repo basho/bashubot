@@ -28,7 +28,9 @@ uploadUserMan =
   home: process.env.UPLOAD_HOME
   keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
   writeKey: (msg, fun) ->
-    response = cp.exec "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\"", (error, stdout, stderr) ->
+    cmd = "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\""
+    msg.robot.logger.info cmd
+    response = cp.exec cmd, (error, stdout, stderr) ->
       if error
         msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
       else
@@ -37,6 +39,7 @@ uploadUserMan =
 
   userAction: (msg, cmd, name, ticket) ->
     @writeKey msg, () =>
+      msg.robot.logger.info "cp.spawn \"ssh\", [\"-i\",@keyfile,\"#{@user}@#{@host}\"]"
       stream = cp.spawn "ssh", ["-i",@keyfile,"#{@user}@#{@host}"]
       stream.stdout.on "data", (data) ->
         re = new RegExp "#{name}:([^ ]*)(.*)\n"
