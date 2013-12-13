@@ -21,21 +21,26 @@
 util = require 'util'
 _ = require 'underscore'
 cp = require 'child_process'
+fs = require 'fs'
 
 uploadUserMan = 
   user: process.env.UPLOAD_USER
   host: process.env.UPLOAD_HOST
   home: process.env.UPLOAD_HOME
   keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
+
   writeKey: (msg, fun) ->
-    cmd = "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\""
-    msg.robot.logger.info cmd
-    response = cp.exec cmd, (error, stdout, stderr) ->
-      if error
-        msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
-      else
-        if fun
-          fun()
+    msg.robot.logger.info util.inspect @keyfile
+    fs.exists @keyfile, (ex) =>
+      if not ex
+        fs.open @keyfile,'w',0o0600, (error,fd) =>
+          if error
+            msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
+          else
+            fd.write process.env.UPLOAD_KEY
+            fs.closeSync(fd)
+            if fun
+              fun()
 
   userAction: (msg, cmd, name, ticket) ->
     @writeKey msg, () =>
