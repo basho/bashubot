@@ -42,6 +42,9 @@ util = require 'util'
 cronJob = require('cron').CronJob
 HttpClient = require 'scoped-http-client'
 _ = require 'underscore'
+api = require '../customlib/redirector.coffee'
+crypto = require 'crypto'
+
 
 onCall =
   testing: process.env.TESTING || false
@@ -394,6 +397,34 @@ onCall =
 
     #import: (msg) ->
 
+
+
+    remoteSchedule: (msg) ->
+      md5sum = crypto.createHash('md5')
+      dt = "#{new Date}"
+      docid = process.env.ESCALATION_GOOGLEDOC_ID
+      docid = 'tMVN-ufLaCIwLY_YjiCuhVg'
+      md5sum.update("BashoBot#{dt}#{docid}")
+      data = md5sum.digest('base64')
+
+      request= {
+        url: process.env.ESCALATION_GOOGLEDOC_URL
+        #url: "https://script.google.com/macros/s/AKfycbwIGq4-QJa45GSFeoWGo3XUw0xD00YqVvxISYqKfa_PFDvellA/exec"
+        headers:  { "Content-Type":"application/x-www-form-urlencoded", "Accept":"*/*" }
+        method: "post"
+        data: {date: "#{dt}", data: "#{data}", id: "#{docid}", range: "#{process.env.ESCALATION_GOOGLEDOC_RANGE}", sheet: "#{process.env.ESCALATION_GOOGLEDOC_SHEET}"}
+      }
+
+      api.do_request request, (err, res, body) ->
+        if err
+          msg.reply "Error retrieving schedule: #{err}"
+        else if res.statusCode == 200
+          msg.send "Schedule retrieved"
+          msg.message.text = body
+          onCall.schedule.fromCSV(msg)
+        else
+          msg.reply "HTTP status #{res.statusCode} while retrieving schedule"
+
     fromCSV: (msg) ->
       msg.robot.logger.info "Upload from CSV"
       lines = "#{msg.message.text}".split("\n")
@@ -405,6 +436,8 @@ onCall =
           response.push line
           msg.robot.logger.info "Upload entry #{line}"
           response.push util.inspect @createEntry(msg, dt, fields[1..], true)
+        else
+          response.push "Invalid data '#{line}'"
       msg.send response.join("\n")
 
     # return the audit history entries for the requestd range
@@ -768,3 +801,6 @@ module.exports = (robot) ->
 
   robot.respond /set (?:on[- ]call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
     msg.robot.roleManager.mapUserName(msg,'on_call_name',msg.match[1],msg.match[2])
+
+  robot.respond /update on-call schedule from google( docs*)*/i, (msg) ->
+    onCall.schedule.remoteSchedule(msg)
