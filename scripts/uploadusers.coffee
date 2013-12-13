@@ -31,7 +31,7 @@ uploadUserMan =
 
   userAction: (msg, cmd, name, ticket) ->
     msg.robot.logger.info "upload user #{cmd} #{name} ticket #{ticket}"
-    fs.writeFile "#{@keyfile}","#{process.env.UPLOAD_KEY}", (err) ->
+    fs.writeFile "#{@keyfile}","#{process.env.UPLOAD_KEY}", (err) =>
      msg.robot.logger.info "Keyfile: #{@keyfile} Err: #{err}"
      if err
       msg.reply "Error creating key file"
