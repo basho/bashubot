@@ -183,6 +183,7 @@ zenDesk =
 zenDesk.roles = 
   BARCLAY:
       name: "Barclay"
+      ratelimit: 1000
       setUrl:'macros/28124595.json',
       setData:'{"macro":{"actions":[{"field":"assignee_id","value":"%{user_id}"}]}}',
       getUrl:'macros/28124595.json',
