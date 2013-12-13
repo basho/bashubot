@@ -438,7 +438,7 @@ onCall =
           msg.robot.logger.info "Upload entry #{line}"
           response.push util.inspect @createEntry(msg, dt, fields[1..], true)
         else
-          response.push "Invalid data '#{line}'"
+          response.push "Invalid data (dt:#{dt}) '#{line}'"
       msg.send response.join("\n")
 
     # return the audit history entries for the requestd range
