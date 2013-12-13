@@ -27,11 +27,8 @@ uploadUserMan =
   host: process.env.UPLOAD_HOST
   home: process.env.UPLOAD_HOME
   keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
-
   writeKey: (msg, fun) ->
-    cmd = "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\""
-    msg.robot.logger.info cmd
-    response = cp.exec cmd, (error, stdout, stderr) ->
+    response = cp.exec "sh -c \"[ -d '#{@home}/.ssh' ] || mkdir -p #{@home}/.ssh; chmod 700 #{@home}/.ssh; [ -e #{@keyfile} ] || echo '#{process.env.UPLOAD_KEY}' > #{@keyfile}; chmod 600 #{@keyfile}\"", (error, stdout, stderr) ->
       if error
         msg.reply "Error #{error} creating key file\n#{stdout}\n#{stderr}"
       else
@@ -40,8 +37,6 @@ uploadUserMan =
 
   userAction: (msg, cmd, name, ticket) ->
     @writeKey msg, () =>
-      return
-    test= () ->
       stream = cp.spawn "ssh", ["-i",@keyfile,"#{@user}@#{@host}"]
       stream.stdout.on "data", (data) ->
         re = new RegExp "#{name}:([^ ]*)(.*)\n"
@@ -76,8 +71,7 @@ uploadUserMan =
 module.exports = (robot) ->
   robot.um = uploadUserMan
 
-  robot.respond /(?:create|make) upload user (....*) for ticket [#]*([0-9]+) */i, (msg) ->
-    msg.reply "create user #{msg.match[1]} ticket #{msg.match[2]} by #{msg.envelope.user.name}"
+  robot.respond /(?:create|make) upload user (....*) for ticket [#]?([0-9]*) */i, (msg) ->
     uploadUserMan.userAction msg, 'Create', msg.match[1], msg.match[2]
     
   robot.respond /change password for upload user (.*) for ticket [#]?(.*) */i, (msg) ->
