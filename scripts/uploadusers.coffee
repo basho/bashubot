@@ -27,7 +27,7 @@ uploadUserMan =
   user: process.env.UPLOAD_USER
   host: process.env.UPLOAD_HOST
   home: process.env.UPLOAD_HOME
-  keyfile: "#{process.env.UPLOAD_HOME}/.ssh/#{process.env.UPLOAD_KEYFILE}"
+  keyfile: "#{process.env.UPLOAD_HOME}/#{process.env.UPLOAD_KEYFILE}"
 
   userAction: (msg, cmd, name, ticket) ->
     msg.robot.logger.info "upload user #{cmd} #{name} ticket #{ticket}"
