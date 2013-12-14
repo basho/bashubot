@@ -31,27 +31,27 @@ uploadUserMan =
 
   userAction: (msg, cmd, name, ticket) ->
     msg.robot.logger.info "upload user #{cmd} #{name} ticket #{ticket}"
-    fs.writeFile "#{@keyfile}","#{process.env.UPLOAD_KEY}", (err) =>
+    fs.writeFile "#{@keyfile}","#{process.env.UPLOAD_KEY}", {mode:0o0600}, (err) =>
      msg.robot.logger.info "Keyfile: #{@keyfile} Err: #{err}"
      if err
       msg.reply "Error creating key file"
      else
-      msg.robot.logger.info "cp.spawn \"ssh\", [\"-i\",\"#{@keyfile}\",\"#{@user}@#{@host}\"]"
-      stream = cp.spawn "ssh", ["-i","#{@keyfile}","#{@user}@#{@host}"]
-      stream.stdout.on "data", (data) ->
-        re = new RegExp "#{name}:([^ ]*)(.*)\n"
-        if m = data.toString().match re
-          msg.reply "New user #{name} password #{m[1]}. #{m[2]}.\nPlease copy these details to http://goo.gl/ScbtChPlease copy these details to http://goo.gl/ScbtCh"
-          pnote = "Bashobot created an upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Create"
-          pnote = "Bashobot changed password for upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Change"
-          msg.robot.zenDesk.addComment(msg, ticket, pnote, false) (ticketdata) ->
-            msg.reply("Updated ticket #{ticketdata.id}") if id of ticketdata
-        else
-          msg.reply "#{cmd} failed for user #{name}: #{data}"
-      stream.on "close", (code) ->
-        if code != 0
-          msg.reply "Stream closed with result code #{code}"
-      stream.stdin.write("BASHOBOT:#{cmd}:#{name}\n")
+      cmd = "echo -e 'BASHOBOT:#{cmd}:#{name}\n' | ssh -T -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i #{@keyfile} bashobot@upload.basho.com"
+      msg.robot.logger.info cmd
+      cp.exec cmd, (error, stdout, stderr) => 
+          msg.reply "#{stdout} : #{stderr} : #{util.inspect(error)}"
+          try 
+            re = new RegExp "#{name}:([^ ]*)(.*)\n"
+            if m = stdout.toString().match re
+              msg.reply "New user #{name} password #{m[1]}. #{m[2]}.\nPlease copy these details to http://goo.gl/ScbtChPlease copy these details to http://goo.gl/ScbtCh"
+              pnote = "Bashobot created an upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Create"
+              pnote = "Bashobot changed password for upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Change"
+              msg.robot.zenDesk.addComment(msg, ticket, pnote, false) (ticketdata) ->
+              msg.reply("Updated ticket #{ticketdata.id}") if id of ticketdata
+            else
+              msg.reply "#{cmd} failed for user #{name}: #{stdout}:#{stderr}"
+          catch err 
+            msg.reply util.inspect err
 
   findUser: (msg, ticket) ->
     msg.reply "Searching ZenDesk, please be patient"
