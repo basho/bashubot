@@ -45,7 +45,7 @@ uploadUserMan =
               pnote = "Bashobot created an upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Create"
               pnote = "Bashobot changed password for upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Change"
               msg.robot.zenDesk.addComment(msg, ticket, pnote, false) (ticketdata) ->
-              msg.reply("Updated ticket #{ticketdata.id}") if id of ticketdata
+              msg.reply("Updated ticket #{ticketdata.id}") if "id" of ticketdata
             else
               msg.reply "#{cmd} failed for user #{name}: #{stdout}\n#{stderr}"
           catch err 
