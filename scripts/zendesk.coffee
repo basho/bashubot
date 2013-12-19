@@ -68,7 +68,7 @@ zenDesk =
 
   addComment: (msg, ticknum, comment, customercansee) ->
     updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'"}}}'
-    @put msg, "tickets/#{ticknum}.json", updateobject, ticknum
+    @put msg, "tickets/#{ticknum}.json", updateobject, "ticket"
 
   getComments: (msg, ticketnum) ->
     @get msg, "tickets/#{ticketnum}/comments.json"
