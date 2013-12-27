@@ -350,20 +350,24 @@ onCall =
         msg.robot.brain.get 'ocs-' + idx["date"]
 
     getEntry: (msg, date) ->
-      idx = @getIndexEntry(msg,date)
-      @getEntryByIndex(msg, idx)
+      idx = @getIndexEntry msg, date
+      @getEntryByIndex msg, idx
 
     createEntry: (msg, date, ppl, overwrite) ->
-      dt = @makeDate(date)
-      current = @getIndexEntry(msg, dt, true)
+      dt = @makeDate date
+      current = @getIndexEntry msg, dt, true
       dNow = new Date
       epochnow = dNow.getTime()
-      sched = @newScheduleEntry(dt, ppl)
+      sched = @newScheduleEntry dt, ppl
       if not current or (current == []) or (current['date'] != dt)
        idx = @newIndexEntry(msg, dt, false, "create - #{ppl}")
-       @saveEntry(msg, idx, sched)
+       @saveEntry msg, idx, sched
       else
-        if overwrite then @deleteEntryByIndex(msg, current)
+        if not current.deleted
+            old = @getEntryByIndex(msg, current)
+            if old.people.length == ppl.length and _.difference(old.people,sched.people).length == 0 and _.difference(sched.people,old.people).length == 0
+                return "Schedule for #{@epoch2Date dt} unchanged"
+        if overwrite then @deleteEntryByIndex msg, current
         if current['deleted']
             current['deleted'] = false
             current['audit'].push @newAuditEntry(msg, "create - #{ppl}")
@@ -396,33 +400,44 @@ onCall =
       if sched["date"]
         return "#{sched['date']},#{sched['people'].toString() if sched['people'] instanceof Array}"
 
-    #import: (msg) ->
-
-
+    cronRemoteSchedule: (msg,newcron) ->
+      msg.send util.inspect newcron
+      if @schedcron
+        msg.send 'cron already set'
+        if typeof newcron == 'string' and newcron.match /^[^ ]* [^ ]* [^ ]* [^ ]* [^ ]* [^ ]*$/
+            msg.send 'use newcron instaed'
+            schedule = newcron
+        else
+            msg.send 'keep previous setting'
+            return
+      schedule ||= process.env.ESCALATION_REMOTECRONSCHED ? "0 0 4 * * *" # 4am daily
+      msg.robot.logger.info "Create cronjob '#{schedule} onCall.schedule.remoteSchedule(msg)'"
+      @schedcron = new cronJob(schedule, =>
+         @remoteSchedule(msg)
+      )
+      @schedcron.start()
 
     remoteSchedule: (msg) ->
       md5sum = crypto.createHash('md5')
       dt = "#{new Date}"
       docid = process.env.ESCALATION_GOOGLEDOC_ID
-      docid = 'tMVN-ufLaCIwLY_YjiCuhVg'
       md5sum.update("BashoBot#{dt}#{docid}")
       data = md5sum.digest('base64')
-
       request= {
         url: process.env.ESCALATION_GOOGLEDOC_URL
-        #url: "https://script.google.com/macros/s/AKfycbwIGq4-QJa45GSFeoWGo3XUw0xD00YqVvxISYqKfa_PFDvellA/exec"
         headers:  { "Content-Type":"application/x-www-form-urlencoded", "Accept":"*/*" }
         method: "post"
         data: {date: "#{dt}", data: "#{data}", id: "#{docid}", range: "#{process.env.ESCALATION_GOOGLEDOC_RANGE}", sheet: "#{process.env.ESCALATION_GOOGLEDOC_SHEET}"}
       }
       msg.send "Requesting schedule"
-      api.do_request request, (err, res, body) ->
+      api.do_request request, (err, res, body) =>
         if err
           msg.reply "Error retrieving schedule: #{err}"
         else if res.statusCode == 200
           msg.send "Schedule retrieved"
           msg.message.text = body
-          onCall.schedule.fromCSV(msg)
+          @fromCSV(msg)
+          @pruneSchedule(msg)
         else
           msg.reply "HTTP status #{res.statusCode} while retrieving schedule"
 
@@ -486,9 +501,8 @@ onCall =
           msg.send "Purge successful"
         else
           msg.send "Remaining index: #{util.inspect @getIndex(msg,true)}"
-        dt = new Date
         purgeAudit =
-          date: dt.getTime()
+          date: (new Date).getTime()
           user: msg.message.user
           action: "Purge"
         msg.robot.brain.set 'ocs-lastpurge', purgeAudit
@@ -531,8 +545,7 @@ onCall =
         scheduler: true
       }
       response = []
-      dt = new Date
-      epoch = dt.getTime()
+      epoch = (new Date).getTime()
       oldppl = []
       idx = @getIndexEntry msg, epoch, false
       if (not idx) or (idx == [])
@@ -635,28 +648,29 @@ onCall =
       success = (s["success"] for s in response when s["success"])
       msg.reply "#{errors.join('\n')}\n#{success.join('\n')}"
 
+    pruneSchedule: (msg) ->
+    # prune old entries, keeping only 30 expired schedules
+      idx = @getIndexEntry msg, (new Date).getTime()
+      if idx and idx['date']
+        cutoff = idx['date'] - 86400000 # cutoff 24 hours prior to the current schedule entry
+        index = @getIndexRange(msg,0,idx['date'] - 1000,true)
+        while index.length > 30
+          purgeIndex(index[0])
+          index = index[1..]
+
     #startup initialization
     bootstrap: (robot) ->
       if not robot
         process.stdout.write "No robot, cannot initialize. Bad human! Bad!"
         return
-      dt = new Date
-      epoch = dt.getTime()
       fakemsg=
         robot: robot
         reply: (text) ->
           @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
         send: (text) ->
           @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
-      # prune old entries, keeping only 30 expired schedules
-      idx = @getIndexEntry(fakemsg,epoch)
-      if idx and idx['date']
-        cutoff = idx['date'] = 86400000 # cutoff 24 hours prior to the current schedule entry
-        index = @getIndexRange(fakemsg,0,idx['date'] - 1000,true)
-        while index.length > 30
-          purgeIndex(index[0])
-          index = index[1..]
       @cronApplySchedule(fakemsg)
+      @cronRemoteSchedule(fakemsg)
 
     # confirmation - on the first pass, store an entry in the brain
     # ignore confirmation for 5 seconds to accomodate Hipchate duplicating messages
@@ -721,7 +735,7 @@ module.exports = (robot) ->
      robot.roleHook ||= []
      robot.roleHook.push (robot) ->
        robot.logger.info "Deferred Register #{role}: #{robot.roleManager.register role, robot.onCall.roles[role]}" for own role of robot.onCall.roles
-   onCall.schedule.bootstrap(robot)
+   onCall.schedule.bootstrap robot
 
   
   # This is extremely dangerous, but very useful while debugging
@@ -732,16 +746,16 @@ module.exports = (robot) ->
     msg.reply "#{util.inspect obj}"
 
   robot.respond /purge \s*(?:the )?on[- ]call schedule$/, (msg) ->
-    onCall.schedule.purge(msg)
+    onCall.schedule.purge msg
 
   robot.respond /(check|repair|fix|unfuck) (?:the )?on[- ]call schedule index\s*/, (msg) ->
-    onCall.schedule.checkIndex(msg)
+    onCall.schedule.checkIndex msg
 
   robot.respond /load \s*on[- ]call \s*schedule\s*\n?(.*)/i, (msg) ->
-    onCall.schedule.fromCSV(msg)
+    onCall.schedule.fromCSV msg
 
   robot.respond /apply \s*(?:the )?on[- ]call \s*schedule\s*/i, (msg) ->
-    onCall.schedule.applySchedule(msg)
+    onCall.schedule.applySchedule msg
 
   robot.respond /set (?:the )?\s*on[- ]call \s*schedule (?:for |on )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d) \s*to \s*(.*)/i, (msg) ->
     people = msg.match[2].split(",")
@@ -752,34 +766,34 @@ module.exports = (robot) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "#{msg.match[2]}: #{typeof msg.match[2]}"
     msg.robot.logger.info "Put #{people.toString()} on-call for #{msg.match[2]} #{msg.match[3]}"
-    onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.union)
+    onCall.schedule.modify msg, people, msg.match[2], msg.match[3], _.union
 
   robot.respond /unschedule \s*(.*) \s*from \s*on[- ]call \s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)\s*(?:until |thru |through |to )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     people = msg.match[1].split(",")
     msg.robot.logger.info "Remove #{people.toString()} from on-call for #{msg.match[2]}"
-    onCall.schedule.modify(msg,people,msg.match[2],msg.match[3],_.difference)
+    onCall.schedule.modify msg,people, msg.match[2], msg.match[3], _.difference
 
   robot.respond /clear \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:until |to |through |thru )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     msg.robot.logger.info "Clear the on-call schedule from #{msg.match[1]} to #{msg.match[2]}"
-    onCall.schedule.clear(msg, msg.match[1], msg.match[2])
+    onCall.schedule.clear msg, msg.match[1], msg.match[2]
 
   robot.respond /(?:export|display|show) (?:the)?\s*(next|current|tomorrow[']?s?|today[']?s?) \s*on[- ]call \s*schedule\s*/i, (msg) ->
     today = new Date
     if /next|tomorrow/i.test msg.match[1]
-      idx = onCall.schedule.getNextIndexEntry(msg, today.getTime(), false)
+      idx = onCall.schedule.getNextIndexEntry msg, today.getTime(), false
     else
-      idx = onCall.schedule.getIndexEntry(msg, today.getTime(), false)
+      idx = onCall.schedule.getIndexEntry msg, today.getTime(), false
     if idx? and idx['date']
-      onCall.schedule.toCSV(msg, idx['date'])
+      onCall.schedule.toCSV msg, idx['date'] 
     else
       msg.reply "No more schedules found"
 
   robot.respond /(?:export|display|show) \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:until |to |through |thru )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
-    onCall.schedule.toCSV(msg, msg.match[1], msg.match[2])
+    onCall.schedule.toCSV msg, msg.match[1], msg.match[2]
 
   robot.respond /audit \s*(?:the )?\s*on[- ]call \s*schedule\s*(?:for |on |from )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*(?:through |thru |to |until )?\s*(today|tomorrow|\d+\/\d+\/\d\d\d\d)?\s*/i, (msg) ->
     msg.robot.logger.info "Display audit records #{util.inspect msg.message.user}"
-    onCall.schedule.audit(msg,msg.match[1],msg.match[2])
+    onCall.schedule.audit msg, msg.match[1], msg.match[2]
 
   robot.respond /(?:who is|show me) on[- ]call\??/i, (msg) ->
     msg.robot.logger.info "Checking on-call."
@@ -793,15 +807,18 @@ module.exports = (robot) ->
   robot.respond  /remove (.*) from on[- ]call\s*/i, (msg) ->
     people = msg.match[1].trim().split(/\s*,\s*/)
     msg.robot.logger.info "Removing #{util.inspect people} from on-call list"
-    onCall.modify(msg, people, _.difference)
+    onCall.modify msg, people, _.difference
 
   robot.respond  /reset on[- ]call\s*/i, (msg) ->
     msg.robot.logger.info "Resetting the on-call list"
-    onCall.modify(msg, [""], _.intersection)
-    onCall.schedule.applySchedule(msg)
+    onCall.modify msg, [""], _.intersection
+    onCall.schedule.applySchedule msg
 
   robot.respond /set (?:on[- ]call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
-    msg.robot.roleManager.mapUserName(msg,'on_call_name',msg.match[1],msg.match[2])
+    msg.robot.roleManager.mapUserName msg, 'on_call_name', msg.match[1], msg.match[2]
 
   robot.respond /update(?: the)* on[ -]call schedule from google(?: docs*)*/i, (msg) ->
-    onCall.schedule.remoteSchedule(msg)
+    onCall.schedule.remoteSchedule msg
+
+  robot.respond /cron update(?: the)* on[ -]call schedule from google(?: docs)* ([^ ]* [^ ]* [^ ]* [^ ]* [^ ]* [^ ]*)/i, (msg) ->
+    onCall.schedule.cronRemoteSchedule msg, msg.match[1] 

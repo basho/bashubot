@@ -5,7 +5,7 @@
 httpClient = require('scoped-http-client')
 util = require 'util'
 handle_following_redirects = {
-    do_request: (request, callback) =>
+    do_request: (request, callback) ->
       if request.data instanceof Object
         data = ""
         for k of request.data
@@ -17,7 +17,7 @@ handle_following_redirects = {
       client = httpClient.create(request.url, headers)
       for h of headers
         client.header(h,headers[h])
-      client[request.method](data) (err, res, body) =>
+      client[request.method](data) (err, res, body) ->
         if err
           callback err, res, body
         else if res.statusCode > 299 and res.statusCode < 400
