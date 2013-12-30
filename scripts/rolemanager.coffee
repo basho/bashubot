@@ -77,8 +77,13 @@ roleManager = {
         else
           delay = last + roleData.ratelimit - now
           delayact = () =>
+            msg.robot.logger.info "Retrying operation  #{act} #{role} #{arg}"
+            msg.delayTimer.shift()
             @action msg, act, role, arg
-          setTimeout delayact, delay
+          msg.delayTimer ||= []
+          msg.send "Delaying operation #{act} #{role} #{arg} due to rate limit"
+          msg.robot.logger.info "Delaying operation #{act} #{role} #{arg} due to rate limit"
+          msg.delayTimer.push setTimeout delayact, delay
 
     isRole: (role) -> @roles.hasOwnProperty role.toUpperCase()
 
