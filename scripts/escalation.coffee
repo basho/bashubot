@@ -400,7 +400,6 @@ onCall =
         return "#{sched['date']},#{sched['people'].toString() if sched['people'] instanceof Array}"
 
     cronRemoteSchedule: (msg,newcron) ->
-      msg.send util.inspect newcron
       if @schedcron
         msg.send 'cron already set'
         if typeof newcron == 'string' and newcron.match /^[^ ]* [^ ]* [^ ]* [^ ]* [^ ]* [^ ]*$/
