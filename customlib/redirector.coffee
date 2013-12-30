@@ -10,7 +10,10 @@ handle_following_redirects = {
         data = ""
         for k of request.data
           data = data + '&' if data isnt ""
-          data = data + k + '=' + encodeURIComponent(request.data[k])
+          value = request.data[k]
+          if value instanceof Object
+            value = JSON.stringify request.data[k]
+          data = data + k + '=' + encodeURIComponent(value)
       else 
         data = request.data
       headers = request.headers
