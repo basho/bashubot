@@ -110,20 +110,19 @@ onCall =
         if @testing
           msg.reply "If I were allowed to set the on-call list, I would set it to: #{newOnCall.join ", "}"
         else
-          http.header('Content-Type', 'text/plain').put(newOnCall.join("\n")) (err, res, body) ->
+          http.header('Content-Type', 'text/plain').put(newOnCall.join("\n")) (err, res, body) =>
             if err
-              msg.reply "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
+              msg.send "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
               msg.send "Ok, I updated the on-call list"
-              http.get() (err,res,body) =>
-                if not err
-                  diffs = _.difference(newOnCall,body.trim().split("\n"))
-                  if diffs.length > 0
-                    msg.send "Failed to add: #{diffs.toString()}"
-                  diffs = _.difference(body.trim().split("\n"),newOnCall)
-                  if diffs.length > 0
-                    msg.send "Failed to remove: #{diffs.toString()}"
-                onCall.list(msg)
+              @get msg, (names) =>
+                diffs = _.difference(newOnCall,names)
+                if diffs.length > 0
+                  msg.send "Failed to add: #{diffs.toString()}"
+                diffs = _.difference(names,newOnCall)
+                if diffs.length > 0
+                  msg.send "Failed to remove: #{diffs.toString()}"
+                msg.send "Here's who's on-call: #{names.join(', ')}"
 
 # structure of schedule data in robot.brain
 # ocs-index : [onCasllScheduleIndexEntry]
@@ -535,35 +534,37 @@ onCall =
 
     # locate the schedule entry for today and change who is on-call
     applySchedule: (realmsg) ->
-      msg = {
+      realmsg.send "Applying on-call schedule"
+      rmsg = 
         robot: realmsg.robot
         reply: realmsg.reply
         message: realmsg.message
         envelope: realmsg.envelope
-        send: () ->
-          true
         scheduler: true
-      }
-      response = []
+        delayTimer: []
+        response: []
+      rmsg.msg = rmsg
+      rmsg.send = (txt) ->
+          rmsg.response.push txt
       epoch = (new Date).getTime()
       oldppl = []
-      idx = @getIndexEntry msg, epoch, false
+      idx = @getIndexEntry rmsg, epoch, false
       if (not idx) or (idx == [])
-        msg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
+        rmsg.reply "Error: Cannot locate an on-call schedule entry that covers #{@epoch2Date(epoch)}!"
         return
-      sched = @getEntryByIndex(msg, idx)
-      msg.send "Updating to the on-call schedule for #{@epoch2Date(epoch)}"
-      lastapply = msg.robot.brain.get 'ocs-lastapplied'
+      sched = @getEntryByIndex(rmsg, idx)
+      rmsg.send "Updating to the on-call schedule for #{@epoch2Date(epoch)}"
+      lastapply = rmsg.robot.brain.get 'ocs-lastapplied'
       if not lastapply? or lastapply < idx["date"]
-        oldidx = @getIndexEntry msg, idx["date"] - 1000, false
+        oldidx = @getIndexEntry rmsg, idx["date"] - 1000, false
         if oldidx
-          osched = @getEntryByIndex(msg, oldidx)
-          msg.send "Old schedule: #{@prettyEntry osched}"
+          osched = @getEntryByIndex(rmsg, oldidx)
+          rmsg.send "Old schedule: #{@prettyEntry osched}"
           oldppl = _.difference(osched["people"],sched["people"])
       if lastapply? and lastapply == idx["date"]
-        msg.send "Re-applying schedule #{sched['date']}"
+        rmsg.send "Re-applying schedule #{sched['date']}"
       else
-        msg.send "New schedule: #{@prettyEntry sched}"
+        rmsg.send "New schedule: #{@prettyEntry sched}"
       removenames = []
       removeroles = []
       addnames = []
@@ -578,34 +579,38 @@ onCall =
                 addroles.push [m[1],m[2]]
             else
                 addnames.push person
-      msg.robot.logger.info "Updating on-call Removing:[#{removeroles},#{removenames}] Adding:[#{addroles},#{addnames}]"
+      rmsg.robot.logger.info "Updating on-call Removing:[#{removeroles},#{removenames}] Adding:[#{addroles},#{addnames}]"
       for role in removeroles
-        response.push "Remove Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
-        msg.robot.roleManager.action msg, 'unset', role[0], role[1]
+        rmsg.send "Remove Role: #{role} - #{rmsg.robot.roleManager.isRole role[0]}"
+        rmsg.robot.roleManager.action rmsg, 'unset', role[0], role[1]
       if removenames.length > 0
-        response.push "Remove #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
-        if removenames.length > 0
-          onCall.modify(msg,removenames, _.difference)
-          delaymod = () ->
-            onCall.modify(msg, addnames, _.union)
-          setTimeout delaymod, 1000
+        rmsg.send "Remove #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
+        onCall.modify rmsg,removenames, _.difference
+        delaymod = () ->
+          onCall.modify rmsg, addnames, _.union
+        setTimeout delaymod, 1000
       else
-        response.push "Add #{addnames}"
-        onCall.modify(msg, addnames, _.union)
-      msg.robot.brain.set 'ocs-lastapplied', idx["date"]
+        rmsg.send "Add #{addnames}"
+        onCall.modify rmsg, addnames, _.union 
+      rmsg.robot.brain.set 'ocs-lastapplied', idx["date"]
       autocreate = process.env.ESCALATION_CREATESCHEDROLE
       for role in addroles
-        response.push "Add Role: #{role} - #{msg.robot.roleManager.isRole role[0]}"
-        msg.robot.roleManager.createRole msg, role[0] if autocreate and not msg.robot.roleManager.isRole role[0]
-        msg.robot.roleManager.action msg, 'set', role[0], role[1] if msg.robot.roleManager.isRole role[0]
-      # allow 30 seconds to allow update to apply before listing results
-      response = response.join "\n"
+        rmsg.send "Add Role: #{role} - #{rmsg.robot.roleManager.isRole role[0]}"
+        rmsg.robot.roleManager.createRole rmsg, role[0] if autocreate and not rmsg.robot.roleManager.isRole role[0]
+        if rmsg.robot.roleManager.isRole role[0]
+          rmsg.robot.roleManager.action rmsg, 'set', role[0], role[1]
+        else
+          rmsg.send "Unable to set role '#{role[0]}'"
+      # allow rate-limited updates to apply before listing results
       delayResult = () =>
-        realmsg.send "on-call schedule application complete."
-        realmsg.send response
-        onCall.list realmsg
-        realmsg.robot.roleManager.showAllRoles realmsg
-      setTimeout delayResult, 30000
+        if rmsg.delayTimer.length > 0
+          setTimeout delayResult, 1000
+        else 
+          realmsg.send "on-call schedule application complete."
+          realmsg.send rmsg.response.join "\n"
+          onCall.list realmsg
+          realmsg.robot.roleManager.showAllRoles realmsg
+      setTimeout delayResult, 10000
 
     # modify a range of schedule entries
     # adds an entry at the beginning of the range if necessary
