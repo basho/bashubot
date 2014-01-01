@@ -672,13 +672,13 @@ onCall =
         robot: robot
         message: 
           user: 
-            reply_to: '20796_99195@chat.hipchat.com',
-            name: 'Basho Bot',
-            mention_name: 'BashoBot',
-            jid: '20796_99195@chat.hipchat.com' },
-          text: 'bootstrap process',
-          id: undefined,
-          done: false,
+            reply_to: '20796_99195@chat.hipchat.com'
+            name: 'Basho Bot'
+            mention_name: 'BashoBot'
+            jid: '20796_99195@chat.hipchat.com' 
+          text: 'bootstrap process'
+          id: undefined
+          done: false
           room: undefined
         reply: (text) ->
           @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
