@@ -433,6 +433,7 @@ onCall =
           msg.reply "Error retrieving schedule: #{err}"
         else if res.statusCode == 200
           msg.send "Schedule retrieved"
+          msg.message ||= []
           msg.message.text = body
           @fromCSV(msg)
           @pruneSchedule(msg)
@@ -669,6 +670,16 @@ onCall =
         return
       fakemsg=
         robot: robot
+        message: 
+          user: 
+            reply_to: '20796_99195@chat.hipchat.com',
+            name: 'Basho Bot',
+            mention_name: 'BashoBot',
+            jid: '20796_99195@chat.hipchat.com' },
+          text: 'bootstrap process',
+          id: undefined,
+          done: false,
+          room: undefined
         reply: (text) ->
           @robot.messageRoom process.env.ESCALATION_NOTIFICATIONROOM ? "Shell", text
         send: (text) ->
