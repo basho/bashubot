@@ -118,11 +118,11 @@ onCall =
               @get msg, (names) =>
                 diffs = _.difference(newOnCall,names)
                 if diffs.length > 0
-                  msg.send "Failed to add: #{diffs.toString()}"
+                  msg.send "Failed to add: #{diffs.join ', '}"
                 diffs = _.difference(names,newOnCall)
                 if diffs.length > 0
-                  msg.send "Failed to remove: #{diffs.toString()}"
-                msg.send "Here's who's on-call: #{names.join(', ')}"
+                  msg.send "Failed to remove: #{diffs.join ', '}"
+                msg.send "Here's who's on-call: #{names.join ', '}"
 
 # structure of schedule data in robot.brain
 # ocs-index : [onCasllScheduleIndexEntry]
@@ -397,7 +397,7 @@ onCall =
 
     prettyEntry: (sched) ->
       if sched["date"]
-        return "#{sched['date']},#{sched['people'].toString() if sched['people'] instanceof Array}"
+        return "#{sched['date']},#{sched['people'].join ', ' if sched['people'] instanceof Array}"
 
     cronRemoteSchedule: (msg,newcron) ->
       if @schedcron
@@ -584,7 +584,7 @@ onCall =
         rmsg.send "Remove Role: #{role} - #{rmsg.robot.roleManager.isRole role[0]}"
         rmsg.robot.roleManager.action rmsg, 'unset', role[0], role[1]
       if removenames.length > 0
-        rmsg.send "Remove #{removenames.toString()} Adding #{addroles.toString()} #{addnames.toString()}"
+        rmsg.send "Remove #{removenames.join ', '} Adding #{addroles.join ', '} #{addnames.join ', '}"
         onCall.modify rmsg,removenames, _.difference
         delaymod = () ->
           onCall.modify rmsg, addnames, _.union
@@ -643,7 +643,7 @@ onCall =
       for i in idx
         sched = @getEntryByIndex(msg, i)
         newlist = op(sched["people"], people)
-        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.toString()}")
+        i["audit"].push @newAuditEntry(msg, "modify - #{newlist.join ', '}")
         if sched
             sched["people"] = newlist
             response.push @saveEntry(msg, i, sched)
