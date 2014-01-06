@@ -149,7 +149,7 @@ roleManager = {
     if users.length is 0
         msg.reply "No user found for '#{name}'"
     else if users.length > 1
-        msg.reply "Multiple matches for '#{name}' #{(_.map users,(u) -> u.name).join(',')}"
+        msg.reply "Multiple matches for '#{name}' #{(_.map users,(u) -> u.name).join(', ')}"
     else if users.length is 1
         user = users[0]
         msg.robot.brain.data.users[user.id][field] = mapname

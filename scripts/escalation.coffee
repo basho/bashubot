@@ -61,9 +61,9 @@ onCall =
       @get msg, (names) ->
         current = _.intersection old,names
         bad = _.difference old,names
-        response="#{role} role is occupied by #{current.join ','}"
+        response="#{role} role is occupied by #{current.join ', '}"
         if bad.length > 0
-          response="#{response}\n#{bad.join ','} listed as #{role}, but not on call"
+          response="#{response}\n#{bad.join ', '} listed as #{role}, but not on call"
         msg.send response
     else
        msg.send "Role #{role} is unoccupied"
