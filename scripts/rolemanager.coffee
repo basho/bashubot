@@ -256,8 +256,8 @@ roleManager = {
     if @isRole(role)
       rolename = role.toUpperCase()
       dynroles = msg.robot.brain.get "dynamic_roles"
-      for role in dynroles
-        targetrole = role if role.toUpperCase() == rolename
+      for r in dynroles
+        targetrole = r if r.toUpperCase() == rolename
       if targetrole
         names = msg.robot.brain.get "role-" + rolename
         names = [] unless names instanceof Array
