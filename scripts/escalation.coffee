@@ -709,18 +709,18 @@ onCall =
         return false
 
 onCall.roles = {
-    PICARD: 
-      name: "Picard"
+    DATA: 
+      name: "Data"
       ratelimit: 2500
       show: (msg) ->
-        onCall.showRole msg, 'Picard'    
+        onCall.showRole msg, 'Data'    
       set: (msg,name) ->
-        onCall.modifyRole msg, 'Picard', name, _.union
+        onCall.modifyRole msg, 'Data', name, _.union
       unset: (msg,name) ->
-        onCall.modifyRole msg, 'Picard', name, _.difference
+        onCall.modifyRole msg, 'Data', name, _.difference
       get: (msg, role) ->
         (fun) ->
-          fun(onCall.getRole msg, 'Picard')
+          fun(onCall.getRole msg, 'Data')
     
     RIKER: 
       name: "Riker"
