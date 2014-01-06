@@ -200,7 +200,7 @@ zenDesk.roles =
         zenDesk.showRole.call zenDesk, msg, 'Barclay'
       set: (msg, name) =>
         if name instanceof Array
-          zenDesk.setRole.call zenDesk, msg, name.join(','), 'Barclay'
+          zenDesk.setRole.call zenDesk, msg, name.join(', '), 'Barclay'
         else 
           zenDesk.setRole.call zenDesk, msg, name, 'Barclay'
       unset: (msg, name) ->
