@@ -129,8 +129,7 @@ zenDesk =
       else
         msg.reply "I don't know how to check that."
 
-  getRole: (msg, role) ->
-    (fun) =>
+  getRole: (msg, role, fun) ->
       @getUID(role,msg) (userid) =>
         @userData(msg, userid) (data) ->
           # map back to a hipchat user by name or id
@@ -205,8 +204,8 @@ zenDesk.roles =
           zenDesk.setRole.call zenDesk, msg, name, 'Barclay'
       unset: (msg, name) ->
         msg.reply "To unset Barclay role, assign a different person"
-      get: (msg) => 
-        zenDesk.getRole.call zenDesk, msg, 'Barclay'
+      get: (msg, fun) => 
+        zenDesk.getRole.call zenDesk, msg, 'Barclay', fun
 
 module.exports = (robot) ->
   robot.zenDesk = zenDesk
