@@ -60,7 +60,6 @@ roleManager = {
 
     action: (msg, act, role, arg) ->
       #some external APIs have aggrtessive rate limits
-      #so limit to 1 role action every 5 seconds
       if last = msg.robot.brain.get "LastRoleChange" 
         last = parseInt(last)
       else

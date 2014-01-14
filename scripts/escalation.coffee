@@ -718,8 +718,7 @@ onCall.roles = {
         onCall.modifyRole msg, 'Data', name, _.union
       unset: (msg,name) ->
         onCall.modifyRole msg, 'Data', name, _.difference
-      get: (msg, role) ->
-        (fun) ->
+      get: (msg, fun) ->
           fun(onCall.getRole msg, 'Data')
     
     RIKER: 
@@ -731,8 +730,7 @@ onCall.roles = {
         onCall.modifyRole msg, 'Riker', name, _.union
       unset: (msg,name) ->
         onCall.modifyRole msg, 'Riker', name, _.difference
-      get: (msg, role) ->
-        (fun) ->
+      get: (msg, fun) ->
           fun(onCall.getRole msg, 'Riker')
 }
 
