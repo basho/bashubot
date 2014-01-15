@@ -660,7 +660,7 @@ onCall =
         cutoff = idx['date'] - 86400000 # cutoff 24 hours prior to the current schedule entry
         index = @getIndexRange(msg,0,idx['date'] - 1000,true)
         while index.length > 30
-          @purgeIndex(index[0])
+          @purgeIndex(msg,index[0])
           index = index[1..]
 
     #startup initialization
