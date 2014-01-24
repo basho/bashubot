@@ -84,7 +84,7 @@ roleManager = {
           msg.robot.logger.info "Delaying operation #{act} #{role} #{arg} due to rate limit"
           msg.delayTimer.push setTimeout delayact, delay
 
-    isRole: (role) -> @roles.hasOwnProperty role.toUpperCase()
+    isRole: (role) -> @roles.hasOwnProperty role.trim().toUpperCase()
 
     showAllRoles: (msg) ->
       for own r,roleData of @roles
@@ -341,7 +341,7 @@ module.exports = (robot) ->
   robot.respond /list roles/i, (msg) ->
     roleManager.listRoles(msg)
 
-  robot.respond /(?:who is|show(?: me)?) (all roles|named roles|[^ ]*)\??/i, (msg) ->
+  robot.respond /(?:who is|show(?: me)?)\s*(all roles|named roles|[^ ?]*)/i, (msg) ->
     if msg.match[1] is "all roles" or msg.match[1] is "named roles"
       roleManager.showAllRoles msg
     if roleManager.isRole msg.match[1]
@@ -366,7 +366,7 @@ module.exports = (robot) ->
                              i instanceof Object
           for user in users
             if "mention_name" of user
-              msg.send "@#{users[0].mention_name} " + msg.random([
+              msg.send "@#{user.mention_name} " + msg.random([
                        "From the depths of Hell, I summon thee!",  
                        "Please report to the bridge.",  
                        "Your presence is requested in #{msg.message.room}.",  
