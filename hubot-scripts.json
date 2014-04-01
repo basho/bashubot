@@ -5,9 +5,9 @@
  "shipit.coffee",
  "bees.coffee",
  "megusta.coffee",
- "pg-brain.coffee",
  "ping.coffee",
  "achievement_unlocked.coffee",
  "remind.coffee",
- "meme_generator.coffee"
+ "meme_generator.coffee",
+ "time.coffee"
 ]
