@@ -732,6 +732,19 @@ onCall.roles = {
         onCall.modifyRole msg, 'Riker', name, _.difference
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'Riker')
+
+    REDSHIRT:
+      name: "Redshirt"
+      ratelimit: 2500
+      show: (msg) ->
+        onCall.showRole msg, 'Redshirt'    
+      set: (msg,name) ->
+        onCall.modifyRole msg, 'Redshirt', name, _.union
+      unset: (msg,name) ->
+        onCall.modifyRole msg, 'Redshirt', name, _.difference
+      get: (msg, fun) ->
+          fun(onCall.getRole msg, 'Redshirt')
+
 }
 
 module.exports = (robot) ->
