@@ -27,13 +27,13 @@ zenDesk =
   httpClient: () ->
     HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}/token:#{@token}").toString('base64'), 'Accept': 'application/json', 'Content-Type': 'application/json' })
 
-  
+
   process: (msg, method, fun, field) ->
     (err, res, body) ->
       if err
         msg.reply "Error processing #{method} request: #{err}"
       else
-        if res.statusCode == 200
+        if res.statusCode is 200
           bodydata = JSON.parse body
           if fun
             if field
@@ -43,7 +43,7 @@ zenDesk =
             fun(data)
         else
           msg.reply "HTTP status #{res.statusCode} processing #{method} request: #{body}"
-  
+
   get: (msg, api, field) ->
     (fun) =>
       @httpClient().path(api).get() @process(msg, "GET", fun, field)
@@ -103,13 +103,13 @@ zenDesk =
     if roleData.setUrl and roleData.setData
       @parseAction(msg, name, roleData.setData) (actionData) =>
         if @testing
-            msg.reply "If I were allowed to set it, I would set #{util.inspect n} as the new #{role}"
+            msg.send "If I were allowed to set it, I would set #{util.inspect n} as the new #{role}"
         else
           @httpClient().path(roleData.setUrl).put(actionData) (err, res, body) =>
             if err
               msg.reply "Error setting role '" + role + "': " + err
             else
-              if res.statusCode == 200
+              if res.statusCode is 200
                 @showRole(msg, role)
               else
                 msg.reply "HTTP status " + res.statusCode + " received setting role '" + role + "':\n" + body
@@ -122,7 +122,7 @@ zenDesk =
           if err
             msg.reply "Error querying role '" + role + "': " + err
           else
-            if res.statusCode == 200
+            if res.statusCode is 200
               fun(roleData.extractFun(body))
             else
               msg.reply "HTTP status " + res.statusCode + " received querying role '" + role + "'\n" + body
@@ -134,13 +134,13 @@ zenDesk =
         @userData(msg, userid) (data) ->
           # map back to a hipchat user by name or id
           byid = _.filter msg.robot.brain.users(), (u) ->
-            "#{u.zendesk_id}" == "#{data.id}"
-          if byid.length == 1
+            "#{u.zendesk_id}" is "#{data.id}"
+          if byid.length is 1
             fun [byid[0].name]
           else
             byname = _.filter msg.robot.brain.users(), (u) ->
-              "#{u.name}" == "#{data.name}"
-            if byname.length == 1
+              "#{u.name}" is "#{data.name}"
+            if byname.length is 1
               fun [byname[0].name]
             else
               fun [data.name]
@@ -160,19 +160,19 @@ zenDesk =
         if err
           msg.reply "Error searching for user '" + user + "': " + err
         else
-          if res.statusCode == 200 
+          if res.statusCode is 200 
             data = JSON.parse body
             if "user" of data
               u = data.user
             else
-              if data.count == 1
+              if data.count is 1
                 u = data.results[0]
               else
                 list=[]
                 if data.results instanceof Array
                   for u in data.results
                     list.push("ID: #{u.id}, Name: #{u.name}, Organization: #{u.organization}, Role: #{u.role}")
-                msg.reply "Found #{data.count} results for search '#{user}'. Please refine the query. #{list.join('\n')}"
+                msg.send "Found #{data.count} results for search '#{user}'. Please refine the query. #{list.join('\n')}"
             if u
               parsed = action.replace(/%{user_id}/gi, u.id).replace(/%{user_name}/gi,u.name).replace(/%{user_email}/gi,u.email)
               fun(parsed) if fun
@@ -190,7 +190,7 @@ zenDesk.roles =
         act = JSON.parse(data).macro.actions
         userid = -1
         for a in act
-          if a.field == "assignee_id"
+          if a.field is "assignee_id"
             userid = a.value
             break
         return userid
@@ -203,7 +203,7 @@ zenDesk.roles =
         else 
           zenDesk.setRole.call zenDesk, msg, name, 'Barclay'
       unset: (msg, name) ->
-        msg.reply "To unset Barclay role, assign a different person"
+        msg.send "To unset Barclay role, assign a different person"
       get: (msg, fun) => 
         zenDesk.getRole.call zenDesk, msg, 'Barclay', fun
 
