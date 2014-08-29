@@ -39,7 +39,7 @@ roleManager = {
 
     register: (name,data) ->
       if "show" of data and "set" of data and "unset" of data and "get" of data
-        data.ratelimit = 0 unless "ratelimit" of data 
+        data.ratelimit = -1 unless "ratelimit" of data 
         roleManager.roles[name] = data
         return true
       else 
@@ -70,7 +70,7 @@ roleManager = {
           if roleData[act]
               if last < now and roleData.ratelimit > 0
                 msg.robot.brain.set "LastRoleChange", now
-              roleData[act] msg, arg 
+              util.inspect roleData[act] msg, arg 
           else
               msg.reply "Unkown method '#{act}' for role '#{role}'"
         else
@@ -80,20 +80,19 @@ roleManager = {
             msg.delayTimer.shift()
             @action msg, act, role, arg
           msg.delayTimer ||= []
-          msg.send "Delaying operation #{act} #{role} #{arg} due to rate limit"
-          msg.robot.logger.info "Delaying operation #{act} #{role} #{arg} due to rate limit"
+          msg.send "Delaying operation #{act} #{role} #{arg} due to rate limit #{now-last}/#{roleData.ratelimit}"
+          msg.robot.logger.info "Delaying operation #{act} #{role} #{arg} due to rate limit #{now-last}/#{roleData.ratelimit}"
           msg.delayTimer.push setTimeout delayact, delay
 
     isRole: (role) -> @roles.hasOwnProperty role.trim().toUpperCase()
 
     showAllRoles: (msg) ->
-      for own r,roleData of @roles
+      for own r in @listRoles(msg)
           @action msg, 'show', r
 
     listRoles: (msg) ->
       rolelist = _.map @roles, (n,r) =>
                      @roles[r].name || r
-      msg.send "Named roles: #{rolelist.join(", ")}"
 
     fudgeNames: (msg,names,field) ->
       mapUsers = (users,name,step) ->
@@ -104,13 +103,13 @@ roleManager = {
           when 1 then users = msg.robot.brain.usersForFuzzyName(name)
           #step 2 - mention name match
           when 2 then users = _.filter users,(u) ->
-                          u.mention_name == name or "@#{u.mention_name}" == name
+                          u.mention_name is name or "@#{u.mention_name}" is name
           #step 3 - jabber id match
           when 3 then users = _.filter user,(u) ->
-                          u.jid == name
+                          u.jid is name
           #step 4 - match requested field
           when 4 then users = _.filter user, (u) ->
-                          "#{u[field]}" == "#{name}"
+                          "#{u[field]}" is "#{name}"
           else
               users = [null]
         return users
@@ -127,7 +126,7 @@ roleManager = {
         while users.length isnt 1
           users = mapUsers(users,name,step)
           step = step + 1
-        if users[0] == null
+        if users[0] is null
           found.push name
         else
           user = users[0]
@@ -243,7 +242,7 @@ roleManager = {
         restroles = [] unless restroles instanceof Array
         for r in restroles
           remove = [] 
-          if r.toUpperCase() == rolename
+          if r.toUpperCase() is rolename
             msg.send "Removing role '#{r}' from restricted list"
             remove.push r 
         msg.robot.brain.set "restricted_roles", _.difference restroles, remove
@@ -256,7 +255,7 @@ roleManager = {
       rolename = role.toUpperCase()
       dynroles = msg.robot.brain.get "dynamic_roles"
       for r in dynroles
-        targetrole = r if r.toUpperCase() == rolename
+        targetrole = r if r.toUpperCase() is rolename
       if targetrole
         names = msg.robot.brain.get "role-" + rolename
         names = [] unless names instanceof Array
@@ -339,13 +338,13 @@ module.exports = (robot) ->
     roleManager.unrestrictRole msg, msg.match[1]
 
   robot.respond /list roles/i, (msg) ->
-    roleManager.listRoles(msg)
+    msg.send "Named roles: #{roleManager.listRoles(msg).join(", ")}"
 
   robot.respond /(?:who is|show(?: me)?)\s*(all roles|named roles|[^ ?]*)/i, (msg) ->
     if msg.match[1] is "all roles" or msg.match[1] is "named roles"
-      roleManager.showAllRoles msg
-    if roleManager.isRole msg.match[1]
-      roleManager.action msg, 'show', msg.match[1]
+      msg.robot.roleManager.showAllRoles msg
+    if msg.robot.roleManager.isRole msg.match[1]
+      msg.robot.roleManager.action msg, 'show', msg.match[1]
 
   robot.respond /put \s*(.*) \s*in \s*([^ ]*) role\s*/i, (msg) ->
     roleManager.action msg, 'set', msg.match[2], msg.match[1]
