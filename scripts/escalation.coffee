@@ -1276,6 +1276,7 @@ module.exports = (robot) ->
 
   robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)?\s*url (.*) doci?d? ([^ ]*) sheet (.*) range (.*)/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
+    msg.respond "update #{idx} #{msg.match[2]} #{msg.match[3]} #{msg.match[4]} #{msg.match[5]}"
     if (idx? && msg.match[2] && msg.match[3] && msg.match[4] && msg.match[5])
       onCall.schedule.linkScheduleToGoogleDoc msg, idx, msg.match[2], msg.match[3], msg.match[4], msg.match[5]
 
