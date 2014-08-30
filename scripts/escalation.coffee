@@ -1274,9 +1274,9 @@ module.exports = (robot) ->
   robot.respond /set (?:on[- ]?call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
     msg.robot.roleManager.mapUserName msg, 'on_call_name', msg.match[1], msg.match[2]
 
-  robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)?\s*url (.*) doci?d? ([^ ]*) sheet (.*) range (.*)/i, (msg) ->
+  robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)*\s*url (.*) doci?d? ([^ ]*) sheet (.*) range (.*)/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
-    msg.respond "update #{idx} #{msg.match[2]} #{msg.match[3]} #{msg.match[4]} #{msg.match[5]}"
+    msg.send "update #{idx} #{msg.match[2]} #{msg.match[3]} #{msg.match[4]} #{msg.match[5]}"
     if (idx? && msg.match[2] && msg.match[3] && msg.match[4] && msg.match[5])
       onCall.schedule.linkScheduleToGoogleDoc msg, idx, msg.match[2], msg.match[3], msg.match[4], msg.match[5]
 
