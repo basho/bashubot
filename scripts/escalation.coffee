@@ -76,7 +76,7 @@ onCall =
 
   showRole: (msg,role) ->
     old = @getRole msg, role
-    if old.length > 0
+    if old? and old.length > 0
       @.get msg, (names) ->
         current = _.intersection old,names
         bad = _.difference old,names
