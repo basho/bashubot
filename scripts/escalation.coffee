@@ -33,7 +33,7 @@
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
 #  hubot set on-call name for <fuzzy user> to <name> - set the case-sensitive name the on-call server uses for this Hipchat user
-#  hubot update the <name> on-call schedule from google docs [url <url> docid <docid> sheet <name> range <A1-style range>]
+#  hubot update the <name> on-call schedule from google docs [uri <uri> docid <docid> sheet <name> range <A1-style range>]
 #  hubot create new [ad-hoc] on-call schedule named <name>
 #  hubot list on-call schedules [details] - show names of know schedules
 #  hubot delete [the] <naem> on-call schedule - purge and remove named schedule
@@ -1274,11 +1274,11 @@ module.exports = (robot) ->
   robot.respond /set (?:on[- ]?call name|on_call_name) for (.*) to (.*)$/i, (msg) ->
     msg.robot.roleManager.mapUserName msg, 'on_call_name', msg.match[1], msg.match[2]
 
-  robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)*\s*url (.*) doci?d? ([^ ]*) sheet (.*) range (.*)/i, (msg) ->
+  robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)*\s*uri (.*) doci?d? ([^ ]*) sheet (.*) range (.*)/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
     msg.send "update #{idx} #{msg.match[2]} #{msg.match[3]} #{msg.match[4]} #{msg.match[5]}"
     if (idx? && msg.match[2] && msg.match[3] && msg.match[4] && msg.match[5])
-      onCall.schedule.linkScheduleToGoogleDoc msg, idx, msg.match[2], msg.match[3], msg.match[4], msg.match[5]
+      onCall.schedule.linkScheduleToGoogleDoc msg, idx, "https://script.google.com/#{msg.match[2]}", msg.match[3], msg.match[4], msg.match[5]
 
   robot.respond /update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs?)?\s*$/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
