@@ -925,7 +925,7 @@ onCall =
       if @getScheduleType realmsg, schedIdx is 'ad-hoc'
         realmsg.send "Directly applying ad-hoc scheudles is not yet supported."
         return null
-      realmsg.send "Applying #{@indexToName realmsg,sched} on-call schedule"
+      realmsg.send "Applying #{@indexToName realmsg,schedIdx} on-call schedule"
       rmsg = 
         robot: realmsg.robot
         reply: realmsg.reply
