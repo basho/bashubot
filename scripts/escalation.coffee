@@ -695,12 +695,12 @@ onCall =
         method: "post"
         data: {date: "#{dt}", data: "#{data}", id: "#{schedule.docid}", range: "#{schedule.range}", sheet: "#{schedule.sheet}"}
       }
-      msg.send "Requesting schedule"
+      msg.send "Requesting #{@indexToName msg,sched}(#{sched}) schedule"
       api.do_request request, (err, res, body) =>
         if err
           msg.reply "Error retrieving #{@indexToName msg,sched}(#{sched}) schedule: #{err}"
         else if res.statusCode is 200
-          msg.send "Schedule retrieved"
+          msg.send "#{@indexToName msg,sched}(#{sched}) Schedule retrieved"
           msg.message ||= []
           msg.message.text = body
           @fromCSV(msg, sched)
