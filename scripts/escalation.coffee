@@ -537,7 +537,7 @@ onCall =
     makeDate: (str) ->
       dt = null
       return str if typeof str is not 'string'
-      dt = (new Date).getTime() if /today/i.test str
+      dt = Date.parse((new Date).toDateString()) if /today/i.test str
       dt = (new Date).getTime() + 86400000 if /tomorrow/i.test str
       dt = (new Date).getTime() - 86400000 if /yesterday/i.test str
       dt = dt ? Date.parse(str)
