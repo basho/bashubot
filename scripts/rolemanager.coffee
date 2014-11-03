@@ -33,7 +33,7 @@ roleManager = {
 #  get(msg) - returns a function that accepts (callback) where callback will be called as callback(<array of names>)
 #   after retrieving the list of occupants
 # 
-#  msg should be a hubot msg structur, name should be a comma delimited string or array
+#  msg should be a hubot msg structure, name should be a comma delimited string or array
 #
 #  other action functions may be defined as needed 
 
@@ -93,6 +93,26 @@ roleManager = {
     listRoles: (msg) ->
       rolelist = _.map @roles, (n,r) =>
                      @roles[r].name || r
+
+    do_getNames: (msg, roles, list) ->
+      if roles.length < 1
+        list
+      else
+        role = roles.shift()
+        if roleManager.isRole role
+          roleManager.action msg, 'get', role, (names) ->
+            if names? 
+              if names not instanceof Array
+                names = names.split ","
+              list = list.concat("#{n}" for n in names when n?)
+        else
+          list = list.concat([role])
+        @do_getNames(msg,roles,list)
+
+    getNames: (msg, roles) ->
+      if roles not instanceof Array
+        roles = roles.split ','
+      roleManager.do_getNames msg, roles, []
 
     fudgeNames: (msg,names,field) ->
       mapUsers = (users,name,step) ->
