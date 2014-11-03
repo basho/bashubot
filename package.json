@@ -1,31 +1,31 @@
 {
-  "name":        "bashubot",
-  "version":     "0.1.0",
-  "author":      "Basho Technologies",
-  "keywords":    "basho hubot campfire",
+  "name": "bashubot",
+  "version": "0.1.0",
+  "author": "Basho Technologies",
+  "keywords": "basho hubot campfire",
   "description": "A helpful little robot for our Campfire chats, based on Github's Hubot.",
-  "licenses":     [{
-    "type":       "Apache 2",
-    "url":        "http://github.com/basho/bashubot/raw/master/LICENSE"
-  }],
-
-  "repository" : {
-    "type" : "git",
-    "url" : "http://github.com/basho/bashubot.git"
+  "licenses": [
+    {
+      "type": "Apache 2",
+      "url": "http://github.com/basho/bashubot/raw/master/LICENSE"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/basho/bashubot.git"
   },
-
   "dependencies": {
     "hubot-hipchat": "2.5.1-1",
     "hubot": "2.5.1",
     "hubot-scripts": "2.4.3",
-    "underscore":"1.5.1",
-    "hiredis":"0.1.15",
-    "optparse":"1.0.4",
-    "cron":"1.0.1",
-    "scoped-http-client":"0.9.7",
-    "pg":"latest"
+    "underscore": "1.5.1",
+    "hiredis": "0.1.15",
+    "optparse": "1.0.4",
+    "cron": "1.0.1",
+    "scoped-http-client": "0.9.7",
+    "pg": "latest",
+    "hipchatter": "^0.1.3"
   },
-
   "engines": {
     "node": "0.10.26",
     "npm": "1.4.3"
