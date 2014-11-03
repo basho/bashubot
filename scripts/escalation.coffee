@@ -29,6 +29,7 @@
 #  hubot check|fix|repair the [name] on-call schedule index
 #  hubot who is on-call - list who is currently on-call
 #  hubot show me on-call - list who is currently on-call
+#  hubot page <name>[, <name>...] message <text> - trigger alert to specified peope/named roles
 #  hubot put <name>[ ,<name>...] on-call - add people to the current on-call list
 #  hubot remove <name>[ ,<name>...] from on-call - remove people from the current on-call list
 #  hubot reset on-call - remove all names from the current on-call list, then apply the current schedule
@@ -66,12 +67,12 @@ onCall =
   silentMsg: (msg) ->
     silence = () -> 
       return
-    m = {}
-    m.robot = msg.robot
-    m.reply = silence
-    m.send = silence
-    m.user = msg.user
-    m.envelope = msg.envelope
+    m = 
+     robot: msg.robot
+     reply: silence
+     send:  silence
+     user: msg.user
+     envelope: msg.envelope
     m
 
   showRole: (msg,role) ->
@@ -190,8 +191,8 @@ onCall =
           msg.send "Removed #{removed.join(", ")} from on-call" if removed.length > 0
           msg.send "Failed to remove #{failed.join(", ")} from on-call" if failed.length > 0
         onCall.queue_run(true)
-
- # do_modify: (msg, people) ->
+  
+ # modify: (msg, people) ->
  #   http = @httpclient()
  
   modify: (msg, people, op) ->
@@ -218,6 +219,26 @@ onCall =
                 if diffs.length > 0
                   msg.send "Failed to remove: #{diffs.join ', '}"
                 msg.send "Here's who's on-call: #{names.join ', '}"
+
+  page: (msg,people,text) ->
+    message = "Page requested by #{msg.envelope.user.name}"
+    message = " #{message} in room #{msg.envelope.room}" if msg.envelope.room?
+    message = "#{message}: #{text}"
+    http = @httpclient("/alert")
+    rolenames = msg.robot.roleManager.getNames(msg,people) # convert any roles to names
+    ppl = msg.robot.roleManager.fudgeNames msg, rolenames, "on_call_name" # map to on_call_name if available
+    req =  
+      names: _.uniq(ppl, false)
+      message: message
+    http.header('content-type','application/json').post(JSON.stringify req) (err, res, body) ->
+      if err
+        msg.reply "Sorry, I couldn't alert #{req.names.join(", ")}\n#{util.inspect(err)}"
+      else
+        if res.statusCode is 200 or res.statusCode is 204
+          msg.reply "Alert sent to #{req.names.join(", ")}"
+        else
+          msg.reply "HTTP response code #{res.statusCode} alerting #{req.names.join(", ")}\nerror: #{util.inspect err}\nbody: #{body}"
+
 
 # All keys added to the hubot brain begin with 'ocs-'
 # to allow for targeted removal if necessary
@@ -295,7 +316,7 @@ onCall =
       schedules = msg.robot.brain.get('ocs-schedules') ? []
       scheds = schedules.filter (S) -> S.idx is idx
       if scheds.length > 1 
-        msg.reply "Error found #{scheds.length} schedules with the same index}"
+        msg.reply "Error found #{scheds.length} schedules with the same index"
         null
       else
         if data? and data.id? and data.idx? and data.type? and scheds[0].idx is data.idx
@@ -322,7 +343,7 @@ onCall =
       schedules = msg.robot.brain.get('ocs-schedules') ? []
       scheds = schedules.filter (S) -> S.idx is idx
       if scheds.length > 1
-        msg.reply "Error found #{sched.length} schedules with the same index}"
+        msg.reply "Error found #{sched.length} schedules with the same index"
         null
       else
         scheds[0]
@@ -1304,4 +1325,9 @@ module.exports = (robot) ->
     if idx != null
       onCall.schedule.cronRemoteSchedule msg, msg.match[2], idx 
 
- 
+  robot.respond /page (.*) message (.*)/i, (msg) ->
+    onCall.page msg, msg.match[1].split(","), msg.match[2]
+
+  robot.respond /page (.*)/i, (msg) ->
+    if not msg.match[1].match /.* message .*/
+      msg.reply "please include a message - `page <name> message <text>`"
