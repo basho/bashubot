@@ -157,13 +157,11 @@ roleManager = {
       return found
 
   mapUserName: (msg, field, name, mapname) ->
-    users = msg.robot.brain.usersForFuzzyName name
-    if users.length is 0
-        ids = msg.robot.roleManager.fudgeNames msg,name,'id'
-        list = _.map ids, (i) ->
-                           msg.robot.brain.users[i] 
-        users = _.filter list, (u) ->
-                                  return (u instanceof Object)
+    ids = msg.robot.roleManager.fudgeNames msg,name,'id'
+    list = _.map ids, (i) ->
+                       msg.robot.brain.data.users[i] 
+    users = _.filter list, (u) ->
+                              return (u instanceof Object)
     if users.length is 0
         msg.reply "No user found for '#{name}'"
     else if users.length > 1

@@ -79,8 +79,29 @@ zenDesk =
   getOrgName: (msg, orgid) ->
     (namefun) =>
       @getOrganization(msg,orgid) (org) ->
-        if namefun
-          namefun(org.name)
+          namefun(org.name) if typeof namefun is 'function'
+
+  getOrgIdFromName: (msg, orgname) ->
+    (fun) ->
+     @search(msg, "type:organization \"#{orgname}\"") (result) ->
+       if typeof result is 'object' and result.count?
+         switch count
+           when 0
+             msg.reply "Organization #{orgname} not found"
+           when 1
+             fun result.results[0].id
+           else
+             msg.reply "Name #{orgname} matches multiple organizations"
+             msg.send (org.name for org in result.results)
+       else
+         msg.reply "Error searching for #{orgname}: #{util.inspect result}"
+
+
+  getOrgNameFromTicket: (msg, ticketnum) ->
+    (fun) =>
+       @ticketData(msg, ticketnum) (ticketdata) =>
+         org = ticketdata.organization_id
+         @getOrgName(msg,org) fun
 
   search: (msg, queryobj) ->
     @query msg, "search.json", queryobj
