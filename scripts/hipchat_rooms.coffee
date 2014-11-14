@@ -65,7 +65,7 @@ hipchatApi =
       allow = access? and access isnt false
       hipchatter.get_room roomid, (err,data) =>
         if err isnt null
-          callback("Unable to retrieve room #{msg.robot.brain.hipchatrooms[roomid].name}: #{err}",null)
+          callback("Unable to retrieve room #{msg.robot.brain.data.hipchatrooms[roomid].name}: #{err}",null)
         else 
           if allow and not (data.name.match(/^Cust:/i) and not data.name.match(/internal/i))
             callback("Room name must begin with 'Cust:' and not contain 'internal'",null)
@@ -102,9 +102,9 @@ hipchatApi =
             @listRooms(msg,index + 100,roomlist) callback
 
   updateLocalRoom: (msg, data) ->
-    room = msg.robot.brain.hipchatrooms[data.id] || {}
+    room = msg.robot.brain.data.hipchatrooms[data.id] || {}
     (room[k] = data[k] for k of data)
-    msg.robot.brain.hipchatrooms[room.id] = room
+    msg.robot.brain.data.hipchatrooms[room.id] = room
 
   updateCustRooms: (msg) ->
     (callback) =>
@@ -113,10 +113,10 @@ hipchatApi =
           callback(err,null)
         else
           @updateLocalRoom(msg,{id:r.id,name:r.name}) for r in roomlist when r.name.match(/^Cust:/i) and not r.name.match(/internal/i)
-          callback(null,msg.robot.brain.hipchatrooms) 
+          callback(null,msg.robot.brain.data.hipchatrooms) 
 
   pairedRoom: (msg,orgid) ->
-      knownrooms = msg.robot.brain.hipchatrooms
+      knownrooms = msg.robot.brain.data.hipchatrooms
       (room for room of knownrooms when knownrooms[room].orgid is orgid)
 
   findRoomFromOrgName: (msg, orgname) ->
@@ -153,7 +153,7 @@ hipchatApi =
           else
             callback("Error getting orgname from id: #{org}",null)
       else
-        room = msg.robot.brain.hipchatrooms[paired[0]]
+        room = msg.robot.brain.data.hipchatrooms[paired[0]]
         callback(error,room)
 
   orgIdFromTicket: (msg, ticketnum) ->
@@ -212,7 +212,7 @@ hipchatApi =
   # check first for exact match, then case-insensitive, then fuzzy
   # update the room list once if no match is found
     (callback) =>
-      list = msg.robot.brain.hipchatrooms
+      list = msg.robot.brain.data.hipchatrooms
       exact = (list[roomid] for roomid of list when list[roomid].name == roomname)
       matched = false
       switch exact?.length || 0
@@ -270,7 +270,7 @@ hipchatApi =
                             (params[k] = data[k] for k in ["name","privacy","is_archived","topic","id"])
                             hipchatter.update_room params, (err, newdata) ->
                               if err is null
-                                msg.robot.brain.hipchatrooms[matchedroom.id].orgid = org.id
+                                msg.robot.brain.data.hipchatrooms[matchedroom.id].orgid = org.id
                                 callback(null,"Room #{matchedroom.name} paired with #{org.name}")
                               else
                                 callback("Error updating room #{data.name}: #{err}",null)
@@ -376,8 +376,8 @@ hipchatApi =
           callback?(err,body)
 
 module.exports = (robot) ->
-  if not robot.brain.hipchatrooms
-    robot.brain.hipchatrooms = {}
+  if not robot.brain.data.hipchatrooms
+    robot.brain.data.hipchatrooms = {}
   robot.respond /(?:get|show) room (.*)\s*$/i, (msg) ->
     msg.send msg.match[1]
     hipchatApi.getRoom msg, msg.match[1]
