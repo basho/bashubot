@@ -304,7 +304,7 @@ hipchatApi =
                           guest_access: false
                         hipchatter.create_room newroom, (err,body,code) ->
                           if err is null
-                            newroom.name = "#{roomname} (internal}"
+                            newroom.name = "#{roomname} (internal)"
                             hipchatter.create_room newroom, (err,body,code) ->
                               if err is null
                                 callback(null,"Created room #{roomname} and #{newroom.name}") 
@@ -395,7 +395,6 @@ module.exports = (robot) ->
 
   robot.respond /(?:create|make) (?:new |hipchat |a )*room (?:for|in)*\s*ticket [#]?([0-9]*)\s*$/i, (msg) ->
     hipchatApi.createRoom(msg,msg.match[1]) (err,created) ->
-      msg.send util.inspect msg.match
       msg.reply err if err?
       msg.reply created if created?
 
