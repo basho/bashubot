@@ -108,7 +108,12 @@ onCall =
       msg.robot.brain.get "role-#{role.toUpperCase()}" ? []
 
   httpclient: (res) ->
-    HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}:#{@password}").toString('base64') }).path(res ? "/on-call")
+    req_headers = {
+      'Authorization': 'Basic ' + new Buffer("#{@user}:#{@password}").toString('base64'),
+      'Accept' : 'application/json',
+      'Content-Type' : 'application/json'
+    }
+    HttpClient.create(@url, headers: req_headers).path(res ? "/zdsms/rest/on-call/current")
 
   list: (msg) ->
     @get msg, (names) -> 
@@ -118,13 +123,15 @@ onCall =
     onCall.queue.push {'msg':msg,'args':callback,'action':(msg,callback) -> onCall.do_get(msg, callback)}
     onCall.queue_run()
 
-  do_get: (msg,callback) ->
+  do_get: (msg, callback) ->
     http = @httpclient()
-    http.get() (err,res,body) ->
+    http.get() (err, res, body) ->
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
-        callback(body.trim().split("\n"))
+        # JSON will be returned in this form ["Name One","Name Two"]
+        names = JSON.parse(body.trim())
+        callback(names)
       onCall.queue_run(true)
 
   showQueue: (msg) ->
@@ -147,7 +154,7 @@ onCall =
     onCall.queue_run()
 
   do_add: (msg, people) ->
-    http = @httpclient("/on-call-add")
+    http = @httpclient()
     names = msg.robot.roleManager.fudgeNames(msg, people, "on_call_name")
     if @testing
       msg.send "If I were allowed, I would add #{names.join(", ")} to the on-call list"
@@ -156,15 +163,19 @@ onCall =
           onCall.queue_run(true)
         ,500)
     else
-      http.put(names.join(",")) (err,res,body) ->
+      # JSON message like this {"add":["Name One","Name Two"]}
+      req =
+        add: names
+      http.put(JSON.stringify(req)) (err, res, body) ->
         if err
           msg.reply "Error adding #{util.inspect names} #{err}"
         else
-          newlist = body.trim().split("\n")
-          added = _.intersection names, newlist
-          failed = _.difference names, newlist
-          msg.send "Added #{added.join(", ")} to on-call" if added.length > 0
-          msg.send "Failed to add #{failed.join(", ")} to on-call" if failed.length > 0
+          # NB: must re-fetch to get current list
+          @get msg, (newlist) =>
+            added = _.intersection names, newlist
+            failed = _.difference names, newlist
+            msg.send "Added #{added.join(", ")} to on-call" if added.length > 0
+            msg.send "Failed to add #{failed.join(", ")} to on-call" if failed.length > 0
         onCall.queue_run(true)
 
   remove: (msg, people) ->
@@ -172,7 +183,7 @@ onCall =
     onCall.queue_run()
 
   do_remove: (msg, people) ->
-    http = @httpclient("/on-call-remove")
+    http = @httpclient()
     names = msg.robot.roleManager.fudgeNames msg, people, "on_call_name"
     if @testing
       msg.send "If I were allowed, I would remove #{names.join(", ")} from the on-call list"
@@ -181,56 +192,62 @@ onCall =
           onCall.queue_run(true)
         ,500)
     else
-      http.put(names.join(",")) (err,res,body) ->
+      # JSON message like this {"remove":["Name One","Name Two"]}
+      req =
+        remove: names
+      http.put(JSON.stringify(req)) (err,res,body) ->
         if err
           msg.reply "Error removing #{names.join(", ")}: #{err}"
         else
-          newlist =  body.trim().split("\n")
-          removed = _.difference names, newlist
-          failed = _.intersection names, newlist
-          msg.send "Removed #{removed.join(", ")} from on-call" if removed.length > 0
-          msg.send "Failed to remove #{failed.join(", ")} from on-call" if failed.length > 0
+          # NB: must re-fetch to get current list
+          @get msg, (newlist) =>
+            removed = _.difference names, newlist
+            failed = _.intersection names, newlist
+            msg.send "Removed #{removed.join(", ")} from on-call" if removed.length > 0
+            msg.send "Failed to remove #{failed.join(", ")} from on-call" if failed.length > 0
         onCall.queue_run(true)
   
- # modify: (msg, people) ->
- #   http = @httpclient()
- 
   modify: (msg, people, op) ->
     http = @httpclient()
-    http.get() (err,res,body) =>
+    http.get() (err, res, body) =>
       if err
         msg.reply "Sorry, I couldn't get the on-call list: #{util.inspect(err)}"
       else
-        newOnCall = op(body.trim().split("\n"), msg.robot.roleManager.fudgeNames msg, people, 'on_call_name')
-        #don't actually set the on-call list while testing
+        names = JSON.parse(body.trim())
+        newOnCall = op(names, msg.robot.roleManager.fudgeNames msg, people, 'on_call_name')
+        # don't actually set the on-call list while testing
         if @testing
           msg.reply "If I were allowed to set the on-call list, I would set it to: #{newOnCall.join ", "}"
         else
-          http.header('Content-Type', 'text/plain').put(newOnCall.join("\n")) (err, res, body) =>
+          # JSON message like this {"set":["Name One","Name Two"]}
+          req =  
+            set: newOnCall
+          http.put(JSON.stringify(req)) (err, res, body) =>
             if err
               msg.send "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
               msg.send "Ok, I updated the on-call list"
               @get msg, (names) =>
-                diffs = _.difference(newOnCall,names)
+                diffs = _.difference(newOnCall, names)
                 if diffs.length > 0
                   msg.send "Failed to add: #{diffs.join ', '}"
-                diffs = _.difference(names,newOnCall)
+                diffs = _.difference(names, newOnCall)
                 if diffs.length > 0
                   msg.send "Failed to remove: #{diffs.join ', '}"
                 msg.send "Here's who's on-call: #{names.join ', '}"
 
-  page: (msg,people,text) ->
+  page: (msg, people, text) ->
     message = "Page requested by #{msg.envelope.user.name}"
     message = " #{message} in room #{msg.envelope.room}" if msg.envelope.room?
     message = "#{message}: #{text}"
-    http = @httpclient("/alert")
+    http = @httpclient("/zdsms/alert")
     rolenames = msg.robot.roleManager.getNames(msg,people) # convert any roles to names
     ppl = msg.robot.roleManager.fudgeNames msg, rolenames, "on_call_name" # map to on_call_name if available
     req =  
       names: _.uniq(ppl, false)
       message: message
-    http.header('content-type','application/json').post(JSON.stringify req) (err, res, body) ->
+    # JSON: {"names":["Name One","Name Two"],"message":"ALERT MESSAGE"}
+    http.post(JSON.stringify(req)) (err, res, body) ->
       if err
         msg.reply "Sorry, I couldn't alert #{req.names.join(", ")}\n#{util.inspect(err)}"
       else
