@@ -166,12 +166,12 @@ onCall =
       # JSON message like this {"add":["Name One","Name Two"]}
       req =
         add: names
-      http.put(JSON.stringify(req)) (err, res, body) ->
+      http.put(JSON.stringify(req)) (err, res, body) =>
         if err
           msg.reply "Error adding #{util.inspect names} #{err}"
         else
           # NB: must re-fetch to get current list
-          http.get msg, (newlist) =>
+          @get msg, (newlist) =>
             added = _.intersection names, newlist
             failed = _.difference names, newlist
             msg.send "Added #{added.join(", ")} to on-call" if added.length > 0
@@ -195,12 +195,12 @@ onCall =
       # JSON message like this {"remove":["Name One","Name Two"]}
       req =
         remove: names
-      http.put(JSON.stringify(req)) (err,res,body) ->
+      http.put(JSON.stringify(req)) (err,res,body) =>
         if err
           msg.reply "Error removing #{names.join(", ")}: #{err}"
         else
           # NB: must re-fetch to get current list
-          http.get msg, (newlist) =>
+          @get msg, (newlist) =>
             removed = _.difference names, newlist
             failed = _.intersection names, newlist
             msg.send "Removed #{removed.join(", ")} from on-call" if removed.length > 0
@@ -227,7 +227,7 @@ onCall =
               msg.send "Sorry, I couldn't set the new on-call list to #{newOnCall.join(', ')}: #{util.inspect(err)}"
             else
               msg.send "Ok, I updated the on-call list"
-              http.get msg, (names) =>
+              @get msg, (names) =>
                 diffs = _.difference(newOnCall, names)
                 if diffs.length > 0
                   msg.send "Failed to add: #{diffs.join ', '}"
