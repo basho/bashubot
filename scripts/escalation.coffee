@@ -240,7 +240,8 @@ onCall =
     message = "Page requested by #{msg.envelope.user.name}"
     message = " #{message} in room #{msg.envelope.room}" if msg.envelope.room?
     message = "#{message}: #{text}"
-    http = @httpclient("/zdsms/rest/alert")
+    # Note: rest/alert returns 204 / text/html so Accept anything
+    http = @httpclient("/zdsms/rest/alert").header('Accept', '*/*')
     rolenames = msg.robot.roleManager.getNames(msg,people) # convert any roles to names
     ppl = msg.robot.roleManager.fudgeNames msg, rolenames, "on_call_name" # map to on_call_name if available
     req =  
