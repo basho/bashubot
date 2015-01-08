@@ -1017,15 +1017,14 @@ onCall =
         #rmsg.send "Remove Role: #{role} - #{rmsg.robot.roleManager.isRole role[0]}"
         rmsg.robot.roleManager.action rmsg, 'unset', role[0], role[1]
       if removenames.length > 0
-        rmsg.send "Remove #{removenames.join ', '} Adding #{addroles.join ', '} #{addnames.join ', '}"
+        rmsg.send "Remove #{removenames.join ', '}"
         onCall.remove rmsg, removenames
-        onCall.add rmsg, addnames
-      else
-        rmsg.send "Add #{addnames}"
+      if addnames.length > 0 
+        rmsg.send "Add #{addnames.join ', '}"
         onCall.add rmsg, addnames
       rmsg.robot.brain.set "ocs-#{schedIdx}-lastapplied", idx["date"]
       autocreate = process.env.ESCALATION_CREATESCHEDROLE
-      rmsg.send "Adding roles: #{addroles.join ","}" if addroles.length > 0
+      rmsg.send "Adding roles: #{addroles.join ', '}" if addroles.length > 0
       for role in addroles
         #rmsg.send "Add Role: #{role} - #{rmsg.robot.roleManager.isRole role[0]}"
         rmsg.robot.roleManager.createRole rmsg, role[0] if autocreate and not rmsg.robot.roleManager.isRole role[0]
