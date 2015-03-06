@@ -191,8 +191,8 @@ roleManager = {
           names = msg.robot.brain.get "role-" + rolename
           if names.length > 0
             msg.send "Dynamic role #{role} is currently occupied by #{names}"
-          else
-            msg.send "Dynamic role #{role} is currently unoccupied"
+          #else
+            #msg.send "Dynamic role #{role} is currently unoccupied"
         set: (msg, name) =>
           @simpleModify(msg, role, name, _.union)
         unset: (msg, name) =>
