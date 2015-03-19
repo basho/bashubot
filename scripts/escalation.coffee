@@ -1164,7 +1164,7 @@ onCall.roles = {
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'Riker')
 
-    ON-CALLLEAD:
+    'ON-CALLLEAD':
       name: "On-CallLead"
       show: (msg) ->
         onCall.showRole msg, 'On-CallLead'
@@ -1175,7 +1175,7 @@ onCall.roles = {
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'On-CallLead')
 
-    ON-CALLRESERVE:
+    'ON-CALLRESERVE':
       name: "On-CallReserve"
       show: (msg) ->
         onCall.showRole msg, 'On-CallReserve'
