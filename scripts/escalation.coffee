@@ -57,7 +57,7 @@ crypto = require 'crypto'
 onCall =
   testing: process.env.TESTING || false
   #placeholder - roles are defined below to permit circular references
-  roles: {} 
+  roles: {}
   url: process.env.ESCALATION_URL
   user: process.env.ESCALATION_USER
   password: process.env.ESCALATION_PASSWORD
@@ -65,9 +65,9 @@ onCall =
   lastqueuerun: 0
 
   silentMsg: (msg) ->
-    silence = () -> 
+    silence = () ->
       return
-    m = 
+    m =
      robot: msg.robot
      reply: silence
      send:  silence
@@ -100,7 +100,7 @@ onCall =
     names = msg.robot.roleManager.fudgeNames msg,n,"on_call_name"
     old = @getRole msg, role
     current = op old, names
-    action? msg, names 
+    action? msg, names
     msg.robot.brain.set "role-#{role.toUpperCase()}", current
     @showRole msg, role
 
@@ -116,7 +116,7 @@ onCall =
     HttpClient.create(@url, headers: req_headers).path(res ? "/zdsms/rest/on-call/current")
 
   list: (msg) ->
-    @get msg, (names) -> 
+    @get msg, (names) ->
       msg.send "Here's who's on-call: #{names.join(', ')}"
 
   get: (msg, callback) ->
@@ -159,7 +159,7 @@ onCall =
     if @testing
       msg.send "If I were allowed, I would add #{names.join(", ")} to the on-call list"
       setTimeout(
-        () -> 
+        () ->
           onCall.queue_run(true)
         ,500)
     else
@@ -188,7 +188,7 @@ onCall =
     if @testing
       msg.send "If I were allowed, I would remove #{names.join(", ")} from the on-call list"
       setTimeout(
-        () -> 
+        () ->
           onCall.queue_run(true)
         ,500)
     else
@@ -206,7 +206,7 @@ onCall =
             msg.send "Removed #{removed.join(", ")} from on-call" if removed.length > 0
             msg.send "Failed to remove #{failed.join(", ")} from on-call" if failed.length > 0
         onCall.queue_run(true)
-  
+
   modify: (msg, people, op) ->
     http = @httpclient()
     http.get() (err, res, body) =>
@@ -220,7 +220,7 @@ onCall =
           msg.reply "If I were allowed to set the on-call list, I would set it to: #{newOnCall.join ", "}"
         else
           # JSON message like this {"set":["Name One","Name Two"]}
-          req =  
+          req =
             set: newOnCall
           http.put(JSON.stringify(req)) (err, res, body) =>
             if err
@@ -244,7 +244,7 @@ onCall =
     http = @httpclient("/zdsms/rest/alert").header('Accept', '*/*')
     rolenames = msg.robot.roleManager.getNames(msg,people) # convert any roles to names
     ppl = msg.robot.roleManager.fudgeNames msg, rolenames, "on_call_name" # map to on_call_name if available
-    req =  
+    req =
       names: _.uniq(ppl, false)
       message: message
     # JSON: {"names":["Name One","Name Two"],"message":"ALERT MESSAGE"}
@@ -325,7 +325,7 @@ onCall =
         sched[0].idx
       else
         null
- 
+
     updateSchedule: (msg, idxName, data) ->
       if parseInt idxName != idxName
         idx = @nameToIndex msg, idxName
@@ -333,7 +333,7 @@ onCall =
         idx = parseInt(idxName)
       schedules = msg.robot.brain.get('ocs-schedules') ? []
       scheds = schedules.filter (S) -> S.idx is idx
-      if scheds.length > 1 
+      if scheds.length > 1
         msg.reply "Error found #{scheds.length} schedules with the same index"
         null
       else
@@ -479,7 +479,7 @@ onCall =
         return null
       if index instanceof Array
         msg.robot.brain.set "ocs-#{sched}-index", index
-      else 
+      else
         msg.robot.logger.info "Invalid index submitted: #{util.inspect index} for schedule #{@indexToName msg,sched}"
 
     insertIndex: (msg, idx, sched) ->
@@ -708,7 +708,7 @@ onCall =
         else
             msg.send "invalid cron string '#{newcron}'"
             return null
-      
+
     remoteSchedule: (msg, sched) ->
       sched ? (msg.reply "Warning, schedule not specified in call to remoteSchedule, aborting"; return null)
       md5sum = crypto.createHash('md5')
@@ -746,7 +746,7 @@ onCall =
           @pruneSchedule(msg, sched)
         else
           msg.reply "HTTP status #{res.statusCode} while retrieving #{@indexToName msg,sched}(#{sched}) schedule"
-  
+
     fromCSV: (msg, sched) ->
       sched ? (msg.reply "Warning, schedule not specified in call to fromCSV, aborting"; return null)
       msg.robot.logger.info "Upload #{@indexToName msg,sched}(#{sched}) schedule from CSV"
@@ -766,7 +766,7 @@ onCall =
                 when 'ad-hoc'
                   for op in fields[1..]
                     action = op.split(':')
-                    index = @getIndexRange(msg, dt, dt, true, sched) 
+                    index = @getIndexRange(msg, dt, dt, true, sched)
                     entry = @getEntry(msg, dt, sched) ? @newScheduleEntry dt
                     entry = @newScheduleEntry dt unless @makeDate(entry.date) is dt
                     switch action[0]
@@ -775,15 +775,15 @@ onCall =
                       when 'Add','Remove'
                         if (action[1] is "All") or (action[1] is "UTC") or (@nameToIndex onCall.silentMsg(msg), action[1])
                           entry.people = _.union entry.people, op
-                        else 
+                        else
                           response.push "Unknown schedule '#{action[1]}' #{op}"
                       else
                         response.push "Skipping #{op}: unknown action #{action[0]}"
                     if entry.people.length is 0
                       if index.length > 0
-                        @deleteEntryByIndex msg, index[0], sched 
+                        @deleteEntryByIndex msg, index[0], sched
                         response.push "delete entry for #{@epoch2Date dt}"
-                    else 
+                    else
                       response.push util.inspect @saveEntry msg, index[0] ? @newIndexEntry(msg, dt),  entry, sched
                 when 'normal'
                   response.push util.inspect @createEntry msg, dt, fields[1..], true, sched
@@ -802,7 +802,7 @@ onCall =
       lastPurge = msg.robot.brain.get 'ocs-#{sched}-lastpurge'
       if lastPurge and lastPurge["date"]
         response.push "Schedule last purged #{@epoch2DateTime(lastPurge['date'])} by #{util.inspect lastPurge['user']}"
-      else 
+      else
         lastFullPurge = msg.robot.brain.get 'ocs-lastpurge'
         if lastFullPurge and lastFullPurge["date"]
           response.push "Schedule last purged #{@epoch2DateTime(lastFullPurge['date'])} by #{util.inspect lastFullPurge['user']}"
@@ -847,7 +847,7 @@ onCall =
           else
             response.push "Schedule empty"
         for a in idx
-          if a? and a['date']  
+          if a? and a['date']
             response.push @prettyEntry(@getEntryByIndex(msg, a, sched))
       msg.send response.join("\n")
 
@@ -957,7 +957,7 @@ onCall =
               [action, applyWith, role, name] = p.split(":")
               if applyWith is 'All' or @fuzzyNameToIndex(msg, applyWith) is sched
                 msg.send "Ad-Hoc #{action} #{role}:#{name}"
-                msg.robot.roleManager.action msg, (if action is 'Add' then 'set' else 'unset'), role, name 
+                msg.robot.roleManager.action msg, (if action is 'Add' then 'set' else 'unset'), role, name
 
     # locate the schedule entry for today and change who is on-call
     applySchedule: (realmsg, schedIdx) ->
@@ -965,7 +965,7 @@ onCall =
         realmsg.send "Directly applying ad-hoc scheudles is not yet supported."
         return null
       realmsg.send "Applying #{@indexToName realmsg,schedIdx} on-call schedule"
-      rmsg = 
+      rmsg =
         robot: realmsg.robot
         reply: realmsg.reply
         message: realmsg.message
@@ -1019,7 +1019,7 @@ onCall =
       if removenames.length > 0
         rmsg.send "Remove #{removenames.join ', '}"
         onCall.remove rmsg, removenames
-      if addnames.length > 0 
+      if addnames.length > 0
         rmsg.send "Add #{addnames.join ', '}"
         onCall.add rmsg, addnames
       rmsg.robot.brain.set "ocs-#{schedIdx}-lastapplied", idx["date"]
@@ -1037,7 +1037,7 @@ onCall =
       delayResult = () =>
         if rmsg.delayTimer.length > 0
           setTimeout delayResult, 1000
-        else 
+        else
           realmsg.send "on-call schedule application complete."
           realmsg.send rmsg.response.join "\n"
           onCall.list realmsg
@@ -1103,12 +1103,12 @@ onCall =
         return
       fakemsg=
         robot: robot
-        message: 
-          user: 
+        message:
+          user:
             reply_to: '20796_99195@chat.hipchat.com'
             name: 'Basho Bot'
             mention_name: 'BashoBot'
-            jid: '20796_99195@chat.hipchat.com' 
+            jid: '20796_99195@chat.hipchat.com'
           text: 'bootstrap process'
           id: undefined
           done: false
@@ -1142,21 +1142,21 @@ onCall =
         return false
 
 onCall.roles = {
-    DATA: 
+    DATA:
       name: "Data"
       show: (msg) ->
-        onCall.showRole msg, 'Data'    
+        onCall.showRole msg, 'Data'
       set: (msg,name) ->
         onCall.addToRole msg, 'Data', name
       unset: (msg,name) ->
         onCall.removeFromRole msg, 'Data', name
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'Data')
-    
-    RIKER: 
+
+    RIKER:
       name: "Riker"
       show: (msg) ->
-        onCall.showRole msg, 'Riker'    
+        onCall.showRole msg, 'Riker'
       set: (msg,name) ->
         onCall.addToRole msg, 'Riker', name
       unset: (msg,name) ->
@@ -1164,10 +1164,32 @@ onCall.roles = {
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'Riker')
 
+    ON-CALLLEAD:
+      name: "On-CallLead"
+      show: (msg) ->
+        onCall.showRole msg, 'On-CallLead'
+      set: (msg,name) ->
+        onCall.addToRole msg, 'On-CallLead', name
+      unset: (msg,name) ->
+        onCall.removeFromRole msg, 'On-CallLead', name
+      get: (msg, fun) ->
+          fun(onCall.getRole msg, 'On-CallLead')
+
+    ON-CALLRESERVE:
+      name: "On-CallReserve"
+      show: (msg) ->
+        onCall.showRole msg, 'On-CallReserve'
+      set: (msg,name) ->
+        onCall.addToRole msg, 'On-CallReserve', name
+      unset: (msg,name) ->
+        onCall.removeFromRole msg, 'On-CallReserve', name
+      get: (msg, fun) ->
+          fun(onCall.getRole msg, 'On-CallReserve')
+
     REDSHIRT:
       name: "Redshirt"
       show: (msg) ->
-        onCall.showRole msg, 'Redshirt'    
+        onCall.showRole msg, 'Redshirt'
       set: (msg,name) ->
         onCall.addToRole msg, 'Redshirt', name
       unset: (msg,name) ->
@@ -1181,7 +1203,7 @@ module.exports = (robot) ->
 
   robot.logger.info "Escalation/OnCall module loading"
   robot.onCall = onCall
-  
+
   robot.brain.once "loaded", () =>
    if "roleManager" of robot
      for role of onCall.roles
@@ -1192,7 +1214,7 @@ module.exports = (robot) ->
      robot.roleHook.push (robot) ->
        robot.logger.info "Deferred Register #{role}: #{robot.roleManager.register role, robot.onCall.roles[role]}" for own role of robot.onCall.roles
    onCall.schedule.bootstrap robot
-  
+
   # This is extremely dangerous, but very useful while debugging
   # It will permit anyone who can talk to the robot to execute
   # arbitrary javascript
@@ -1208,12 +1230,12 @@ module.exports = (robot) ->
     msg.send "purge by name #{msg.match[1]}"
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
     if idx != null
-      onCall.schedule.purgeSchedule msg,idx 
+      onCall.schedule.purgeSchedule msg,idx
 
   robot.respond /delete \s*(?:the )?(.*) on[- ]?call schedule$/, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
     if idx != null
-      onCall.schedule.deleteSchedule msg,idx 
+      onCall.schedule.deleteSchedule msg,idx
 
   robot.respond /(?:check|repair|fix|unfuck) *(?:the )?(.*) \s*on[- ]?call schedule index\s*/, (msg) ->
     if not msg.match[1]? or msg.match[1] is ""
@@ -1326,7 +1348,7 @@ module.exports = (robot) ->
     msg.send "onCall.schedule.createSchedule msg, #{msg.match[1]}, #{msg.match[2]}"
     onCall.schedule.createSchedule msg, msg.match[1], msg.match[2]
 
-  robot.respond /show the on[- ]?call queue/i, (msg) -> 
+  robot.respond /show the on[- ]?call queue/i, (msg) ->
     onCall.showQueue(msg)
 
   robot.respond /set cron apply for (.*) on[- ]?call schedule to (.*)/i, (msg) ->
@@ -1340,7 +1362,7 @@ module.exports = (robot) ->
   robot.respond /cron update(?: the)* (.*)\s*on[ -]?call schedule from google(?: docs)* ([^ ]* [^ ]* [^ ]* [^ ]* [^ ]* [^ ]*)/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
     if idx != null
-      onCall.schedule.cronRemoteSchedule msg, msg.match[2], idx 
+      onCall.schedule.cronRemoteSchedule msg, msg.match[2], idx
 
   robot.respond /page (.*) message (.*)/i, (msg) ->
     onCall.page msg, msg.match[1].split(","), msg.match[2]
