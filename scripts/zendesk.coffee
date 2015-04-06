@@ -107,7 +107,7 @@ zenDesk =
     @query msg, "search.json", queryobj
 
   getRoleData: (msg, role) ->
-    roleData = @roles[role.toUpperCase()]
+    roleData = @roles[msg.robot.roleManager.toRoleName(role)]
     if roleData instanceof Object
       if roleData.setUrl or roleData.getUrl
         return roleData
@@ -227,6 +227,33 @@ zenDesk.roles =
         msg.send "To unset Barclay role, assign a different person"
       get: (msg, fun) => 
         zenDesk.getRole.call zenDesk, msg, 'Barclay', fun
+  SALESANDTAM:
+      name: "SalesAndTAM"
+      ratelimit: 1000
+      setUrl:'macros/28124595.json',
+      setData:'{"macro":{"actions":[{"field":"assignee_id","value":"%{user_id}"}]}}',
+      getUrl:'macros/28124595.json',
+      extractFun: (data) =>
+        act = JSON.parse(data).macro.actions
+        userid = -1
+        for a in act
+          if a.field is "assignee_id"
+            userid = a.value
+            break
+        return userid
+      #required functions for rolemanager
+      show: (msg) => 
+        zenDesk.showRole.call zenDesk, msg, 'SalesAndTAM'
+      set: (msg, name) =>
+        if name instanceof Array
+          zenDesk.setRole.call zenDesk, msg, name.join(', '), 'SalesAndTAM'
+        else 
+          zenDesk.setRole.call zenDesk, msg, name, 'SalesAndTAM'
+      unset: (msg, name) ->
+        msg.send "To unset SalesAndTAM role, assign a different person"
+      get: (msg, fun) => 
+        zenDesk.getRole.call zenDesk, msg, 'SalesAndTAM', fun
+
 
 module.exports = (robot) ->
   robot.zenDesk = zenDesk
