@@ -97,15 +97,16 @@ onCall =
   modifyRole: (msg, role, n, op, action) ->
     if n not instanceof Array
       n = n.trim().split(',')
+    rolename = msg.robot.roleManager.toRoleName(role)
     names = msg.robot.roleManager.fudgeNames msg,n,"on_call_name"
-    old = @getRole msg, role
+    old = @getRole msg, rolename
     current = op old, names
     action? msg, names
-    msg.robot.brain.set "role-#{role.toUpperCase()}", current
+    msg.robot.brain.set "role-#{rolename}", current
     @showRole msg, role
 
   getRole: (msg, role) ->
-      msg.robot.brain.get "role-#{role.toUpperCase()}" ? []
+      msg.robot.brain.get "role-#{msg.robot.roleManager.toRoleName(role)}" ? []
 
   httpclient: (res) ->
     req_headers = {
@@ -1164,27 +1165,27 @@ onCall.roles = {
       get: (msg, fun) ->
           fun(onCall.getRole msg, 'Riker')
 
-    'ON-CALLLEAD':
-      name: "On-CallLead"
+    'ONCALLLEAD':
+      name: "OnCallLead"
       show: (msg) ->
-        onCall.showRole msg, 'On-CallLead'
+        onCall.showRole msg, 'OnCallLead'
       set: (msg,name) ->
-        onCall.addToRole msg, 'On-CallLead', name
+        onCall.addToRole msg, 'OnCallLead', name
       unset: (msg,name) ->
-        onCall.removeFromRole msg, 'On-CallLead', name
+        onCall.removeFromRole msg, 'OnCallLead', name
       get: (msg, fun) ->
-          fun(onCall.getRole msg, 'On-CallLead')
+          fun(onCall.getRole msg, 'OnCallLead')
 
-    'ON-CALLRESERVE':
-      name: "On-CallReserve"
+    'ONCALLRESERVE':
+      name: "OnCallReserve"
       show: (msg) ->
-        onCall.showRole msg, 'On-CallReserve'
+        onCall.showRole msg, 'OnCallReserve'
       set: (msg,name) ->
-        onCall.addToRole msg, 'On-CallReserve', name
+        onCall.addToRole msg, 'OnCallReserve', name
       unset: (msg,name) ->
-        onCall.removeFromRole msg, 'On-CallReserve', name
+        onCall.removeFromRole msg, 'OnCallReserve', name
       get: (msg, fun) ->
-          fun(onCall.getRole msg, 'On-CallReserve')
+          fun(onCall.getRole msg, 'OnCallReserve')
 
     REDSHIRT:
       name: "Redshirt"
@@ -1309,7 +1310,7 @@ module.exports = (robot) ->
         msg.robot.logger.info "Display #{msg.match[1]} audit records #{util.inspect msg.message.user}"
         onCall.schedule.audit msg, msg.match[2], msg.match[3], idx
 
-  robot.respond /(?:who is|show me) on[- ]?call\??/i, (msg) ->
+  robot.respond /(?:who is|show me) on[- ]?call\??$/i, (msg) ->
     msg.robot.logger.info "Checking on-call."
     onCall.list(msg)
 
