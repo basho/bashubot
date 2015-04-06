@@ -25,7 +25,7 @@ module.exports = (robot) ->
       msg.send "Who ain't I?"
     else if name is robot.name
       msg.send "The best."
-    else if name.toLowerCase() is "on-call" or name.toLowerCase() is "on call" or msg.robot.roleManager.isRole(name)
+    else if name.toLowerCase().match("on[- ]?call") or msg.robot.roleManager.isRole(name)
       # nothing
     else
       users = robot.brain.usersForFuzzyName(name)

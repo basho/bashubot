@@ -47,7 +47,7 @@ roleManager = {
      roles: {}
 
     getRoleData: (msg, role) ->
-      roleData = @roles[role.toUpperCase()]
+      roleData = @roles[@toRoleName(role)]
       if roleData instanceof Object
         if roleData.show and roleData.set and roleData.unset
           return roleData
@@ -84,7 +84,9 @@ roleManager = {
           msg.robot.logger.info "Delaying operation #{act} #{role} #{arg} due to rate limit #{now-last}/#{roleData.ratelimit}"
           msg.delayTimer.push setTimeout delayact, delay
 
-    isRole: (role) -> @roles.hasOwnProperty role.trim().toUpperCase()
+    toRoleName: (role) -> role.replace(/[^0-9a-zA-Z]/g,"").toUpperCase()
+
+    isRole: (role) -> @roles.hasOwnProperty @toRoleName role
 
     showAllRoles: (msg) ->
       for own r in @listRoles(msg)
@@ -172,14 +174,14 @@ roleManager = {
         msg.send "Set #{field} for #{user.name}(@#{user.mention_name}) to '#{mapname}'"
 
   simpleModify: (msg, role, name, op) ->
-    roletag = "role-#{role.toUpperCase()}"
+    roletag = "role-#{@toRoleName(role)}"
     name = name.split(",") unless name instanceof Array
     names = @fudgeNames(msg, name, "name")
     msg.robot.brain.set roletag, op(msg.robot.brain.get(roletag),names)
     msg.send "#{role} is currently occupied by #{msg.robot.brain.get roletag}"
 
   createRole: (msg, role) ->
-    rolename = role.toUpperCase()
+    rolename = @toRoleName(role)
     if @isRole(rolename) 
       msg.reply "Role #{role} already exists"
     else
@@ -208,7 +210,7 @@ roleManager = {
       msg.send "Created role #{rolename} - occupied by #{@action(msg, 'get', role, (data) -> data)}"
 
   restrictRole: (msg, role) ->
-    rolename = role.toUpperCase()
+    rolename = @toRoleName(role)
     if not @isRole rolename
       @createRole msg,role
     restroles = msg.robot.brain.get "restricted_roles"
@@ -246,7 +248,7 @@ roleManager = {
             msg.reply "Restricted role '#{data}' unoccupied"
 
   unrestrictRole: (msg, role) ->
-    rolename = role.toUpperCase()
+    rolename = @toRoleName(role)
     if roledata = @getRoleData msg, role
       if "oldset" of roledata and "oldunset" of roledata and "oldshow" of roledata
         roledata.set = roledata.oldset
@@ -270,7 +272,7 @@ roleManager = {
 
   deleteRole: (msg, role, force) ->
     if @isRole(role)
-      rolename = role.toUpperCase()
+      rolename = @toRoleName(role)
       dynroles = msg.robot.brain.get "dynamic_roles"
       for r in dynroles
         targetrole = r if r.toUpperCase() is rolename
@@ -361,8 +363,10 @@ module.exports = (robot) ->
   robot.respond /(?:who is|show(?: me)?)\s*(all roles|named roles|[^ ?]*)/i, (msg) ->
     if msg.match[1] is "all roles" or msg.match[1] is "named roles"
       msg.robot.roleManager.showAllRoles msg
-    if msg.robot.roleManager.isRole msg.match[1]
-      msg.robot.roleManager.action msg, 'show', msg.match[1]
+    else
+      rolename = msg.robot.roleManager.toRoleName(msg.match[1])
+      if msg.robot.roleManager.isRole rolename
+        msg.robot.roleManager.action msg, 'show', rolename
 
   robot.respond /put \s*(.*) \s*in \s*([^ ]*) role\s*/i, (msg) ->
     roleManager.action msg, 'set', msg.match[2], msg.match[1]
