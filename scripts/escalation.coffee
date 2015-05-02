@@ -1245,8 +1245,8 @@ module.exports = (robot) ->
         idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim()
     onCall.schedule.checkIndex msg, idx
 
-  robot.respond /load \s*on[- ]?call \s*schedule\s*\n?(.*)/i, (msg) ->
-    onCall.schedule.fromCSV msg
+  robot.respond /load \s*(?:the )?(.*) on[- ]?call \s*schedule\s*\n?(.*)/i, (msg) ->
+    onCall.schedule.fromCSV msg, msg.match[1].trim?()
 
   robot.respond /apply \s*(?:the )?(.*) on[- ]?call \s*schedule\s*/i, (msg) ->
     idx = onCall.schedule.fuzzyNameToIndex msg, msg.match[1].trim?()
