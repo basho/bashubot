@@ -44,6 +44,34 @@ hipchatApi =
             msg.reply err if err?
             msg.reply resp if resp?
 
+  printTranscript: (msg, ticketnum) ->
+    (callback) =>
+      @roomFromTicket(msg, ticketnum) (err, room) =>
+        if err isnt null
+          msg.reply err
+        else
+          hipchatter.history room.id, (err, data) =>
+            if err isnt null
+              msg.reply err
+            else
+              startMessage = "Begin support session for ticket #{ticketnum}"
+              replyArray = []
+              printout = false
+              for item in data.items
+                printout = true if item.message is startMessage
+                #if we are at the current ticket session, start gathering transcript
+                if printout
+                  d = new Date(parseInt(Date.parse(item.date)))
+                  formattedDate = "#{d.getMonth() + 1}/#{d.getDate()}/#{d.getFullYear()} #{d.getHours()}:#{if d.getMinutes() < 10 then '0' else ''}#{d.getMinutes()}"
+                  #filter out BashoBot and HipChat messages
+                  if item.file isnt undefined
+                    item.message = "File - #{item.file.name} - #{item.file.url}.  " + item.message
+                  if item.from.name? and (item.from.name isnt "Basho Bot")
+                    replyArray.push "[#{formattedDate}] #{item.from.name}: #{item.message}"
+              pnote = "#{replyArray.join("\n")}"
+              msg.robot.zenDesk.uploadComment msg, ticketnum, "Adding chat transcript from recent HipChat conversation.", true, "ticket_#{ticketnum}_transcript.txt","text/plain", pnote, (retObj) ->
+                msg.reply("Updated ticket #{ticketnum}")
+
   setGuestFromTicketAndTag: (msg,ticketnum,access) ->
     @roomFromTicket(msg,ticketnum) (err,room) =>
       if err isnt null
@@ -398,8 +426,10 @@ module.exports = (robot) ->
       msg.reply err if err?
       msg.reply created if created?
 
-  robot.respond /(?:attach|quote|chat)*\s*log to ticket [#]?([0-9]*)\s*$/i, (msg) ->
-    msg.reply "not yet implemented"
+  robot.respond /(?:attach |quote |chat )*\s*log to ticket [#]?([0-9]*)\s*$/i, (msg) ->
+    hipchatApi.printTranscript(msg, msg.match[1]) (err, generated) ->
+      msg.reply err if err?
+      msg.reply generated if generated?
 
   robot.respond /(?:list |show |all )*(?:open|guest|accessible|public) rooms/i, (msg) ->
     hipchatApi.listOpenRooms msg
@@ -409,7 +439,7 @@ module.exports = (robot) ->
       msg.reply err if err?
       msg.reply result if result?
 
-  robot.respond /get org for ticket (.*)$/i, (msg) ->
+  robot.respond /get org for ticket #]? (.*)$/i, (msg) ->
     msg.robot.zenDesk.getOrgNameFromTicket(msg, msg.match[1]) (Org) ->
       msg.reply Org
 

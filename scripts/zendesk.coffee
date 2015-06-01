@@ -24,16 +24,22 @@ zenDesk =
   user: process.env.ZENDESKAPI_USER
   token: process.env.ZENDESKAPI_TOKEN
 
-  httpClient: () ->
-    HttpClient.create(@url, headers: { 'Authorization': 'Basic ' + new Buffer("#{@user}/token:#{@token}").toString('base64'), 'Accept': 'application/json', 'Content-Type': 'application/json' })
-
+  httpClient: (contentType = "application/json", customHeaders = {}) ->
+    headerObj =  {
+                    'Authorization': 'Basic ' + new Buffer("#{@user}/token:#{@token}").toString('base64'),
+                    'Accept': 'application/json',
+                    'Content-Type': contentType
+                  }
+      for k of customHeaders
+        headerObj[k] = customHeaders[k]
+    HttpClient.create(@url, headers: headerObj)
 
   process: (msg, method, fun, field) ->
     (err, res, body) ->
       if err
         msg.reply "Error processing #{method} request: #{err}"
       else
-        if res.statusCode is 200
+        if res.statusCode is 200 or 201
           bodydata = JSON.parse body
           if fun
             if field
@@ -69,6 +75,16 @@ zenDesk =
   addComment: (msg, ticknum, comment, customercansee) ->
     updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'"}}}'
     @put msg, "tickets/#{ticknum}.json", updateobject, "ticket"
+
+  uploadComment: (msg, ticknum, comment, customercansee, filename, contentType, data, callback) ->
+    @upload(msg, filename, contentType, data) (body) =>
+      filetoken = body.upload.token
+      updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'","uploads":["'+filetoken+'"]}}}'
+      @put(msg, "tickets/#{ticknum}.json", updateobject, "ticket") (callback)
+
+  upload: (msg, filename, contentType, data) ->
+    (fun) =>
+      @httpClient(contentType, {"content-length":data.length}).path("/api/v2/uploads.json").query({"filename":filename}).post(data) @process msg, "POST", fun
 
   getComments: (msg, ticketnum) ->
     @get msg, "tickets/#{ticketnum}/comments.json"
