@@ -712,7 +712,6 @@ onCall =
 
     remoteSchedule: (msg, sched) ->
       sched ? (msg.reply "Warning, schedule not specified in call to remoteSchedule, aborting"; return null)
-      md5sum = crypto.createHash('md5')
       schedule = @getSchedule msg, sched
       dt = "#{new Date}"
       if not schedule.docid
@@ -727,6 +726,7 @@ onCall =
       if not schedule.range
         msg.reply "No Document Range for #{@indexToName msg,sched}(#{sched})"
         return null
+      md5sum = crypto.createHash('md5')
       md5sum.update("BashoBot#{dt}#{schedule.docid}")
       data = md5sum.digest('base64')
       request= {
