@@ -116,7 +116,7 @@ roleManager = {
         roles = roles.split ','
       roleManager.do_getNames msg, roles, []
 
-    fudgeNames: (msg,names,field) ->
+    fudgeNames: (msg,names,field,failmarker=null) ->
       mapUsers = (users,name,step) ->
         if users.length is 0
           users = msg.robot.brain.data.users
@@ -149,7 +149,10 @@ roleManager = {
           users = mapUsers(users,name,step)
           step = step + 1
         if users[0] is null
-          found.push name
+          if failmarker is null
+            found.push name
+          else
+            found.push failmarker
         else
           user = users[0]
           if field of user
