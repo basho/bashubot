@@ -2,13 +2,23 @@
 #  hipchat_rooms - support creating, opening, closing, and capturing history from  rooms
 #
 # Commands:
-#  hubot find room for ticket #<ticket number>
-#  hubot open room for ticket #<ticket number>
-#  hubot close room for ticket #<ticket number>
-#  hubot create room for ticket #<ticket number>
-#  hubot attach chat log to ticket #<ticket number>
+#  hubot attach|quote|chat log to ticket <ticket number>
+#  hubot find room for ticket <ticket number>
+#  hubot open room for ticket <ticket number>
+#  hubot close room for ticket <ticket number>
+#  hubot create room for ticket <ticket number>
+#  hubot attach chat log to ticket <ticket number>
 #  hubot list open rooms
-#  hubot usurp room <room name> for ticket #<ticket number>
+#  hubot list all rooms
+#  hubot get list of rooms
+#  hubot show all rooms
+#  hubot show rooms like <pattern>
+#  hubot list rooms like <pattern>
+#  hubot archive room <name>
+#  hubot unarchive room <name>
+#  hubot archive rooms <name, name, name>
+#  hubot unarchive rooms <name, name, name>
+#  hubot usurp room <room name> for ticket <ticket number>
 #
 # Dependencies:
 #  util
@@ -25,6 +35,14 @@ fuzzy = require 'fuzzy'
 _ = require 'underscore'
 Hipchatter = require 'hipchatter'
 hipchatter = new Hipchatter(process.env.HUBOT_HIPCHAT_TOKEN)
+
+# if infinite modules were infinitely monkey patched ...
+#hipchatter.roomsPayload = (payload,callback) ->
+#  @request 'get', 'room', payload, (err, results) ->
+#    if (err) 
+#        callback err
+#    else 
+#        callback err, results.items
 
 hipchatApi = 
 
@@ -88,8 +106,8 @@ hipchatApi =
               else
                 msg.reply "#{resp}\nError tagging chat: #{err}"
 
-  setGuest: (msg,roomid,access) ->
-    (callback) ->
+  setGuest: (msg, roomid, access) ->
+    (callback) =>
       allow = access? and access isnt false
       hipchatter.get_room roomid, (err,data) =>
         if err isnt null
@@ -101,24 +119,67 @@ hipchatApi =
             if data['is_guest_accessible'] == allow
               callback("Room #{data.name} guest access is already #{allow}#{if allow then "\nGuest access URL is #{data.guest_access_url}" else ""}",null)
             else
-              params ={"is_guest_accessible":allow}
-              (params[k] = data[k] for k in ["name","privacy","is_archived","topic","owner","id"])
-              hipchatter.update_room params, (error,newdata,code) =>
-                if error isnt null
-                  callback("Unable to update room #{data.name}: #{error}",null)
-                else
-                  if code is 204
-                    hipchatter.get_room roomid, (err,newdata) ->
-                      if err is null
-                        callback(null,"Updated room #{data.name}, guest access is now #{allow}#{if allow then "\nGuest access URL is #{newdata.guest_access_url}" else ""}")
-                      else
-                        callback(null,"Updated room #{newdata.name}, guest access is now #{allow}#{if allow then "Error retreiving guest URL: #{err}" else ""}")
+              params={}
+              (params[k] = data[k] for k in ["name","privacy","is_archived","topic","owner","id","is_guest_accessible"])
+              archived = params['is_archived']
+              params['is_archived'] = false
+              if archived
+                @setArchived(msg, data.id, false) (error, newdata) =>
+                  if error isnt null
+                    msg.reply "failed to set room #{params['name']} to unarchived: #{error}"
                   else
-                    callback("Unexpected code #{code} updating room #{data.name}",null)
+                    @setGuest(msg, roomid, access) (err, resp) =>
+                      params['is_archived'] = true
+                      @setArchived(msg, params.id, true) (error,newdata) =>
+                        if error isnt null
+                          msg.reply "failed to set room #{params['name']} back to archived: #{error}"
+                        else 
+                          callback err, resp 
+              else
+                params['is_guest_accessible'] = allow
+                hipchatter.update_room params, (error,newdata,code) =>
+                  if error isnt null
+                    callback("Unable to update room #{data.name}: #{error}",null)
+                  else
+                    if code is 204
+                      hipchatter.get_room roomid, (err,newerdata) ->
+                        if err is null
+                          callback(null,"Updated room #{newerdata.name}, guest access is now #{allow}#{if allow then "\nGuest access URL is #{newerdata.guest_access_url}" else ""}")
+                        else
+                          callback("Updated room #{newdata.name}, guest access is now #{allow}#{if allow then "Error retreiving guest URL: #{err}" else ""}")
+                    else
+                      callback("Unexpected code #{code} updating room #{data.name}",null)
+
+  setArchived: (msg, roomid, value) ->
+    (callback) =>
+      hipchatter.get_room roomid, (err, data) ->
+        if err isnt null
+          callback err
+        else
+          data.is_archived = value
+          hipchatter.update_room data, (error, newdata, code) ->
+            if error isnt null
+              callback(error)
+            else
+              callback null, newdata
+
+  archiveRoom: (msg, roomname, bool) ->
+      @fuzzyMatchRoom(msg, roomname, false) (err, room) =>
+        if err isnt null
+          msg.reply "#{err}"
+        else
+          if room.length is 1
+            @setArchived(msg, room[0].id, bool) (err, newdata) ->
+              if err isnt null 
+                msg.reply "Error #{if !bool then 'un' else ''}archiving #{roomname}: #{err}"
+              else
+                msg.reply "#{if !bool then 'un' else ''}archived #{roomname}"
+          else
+            msg.reply "Found #{room.length} matching '#{roomname}':#{_.map(room, (r) -> r.name).join(", ")}"
 
   listRooms: (msg,index=0,roomlist=[]) ->
    (callback) =>
-     hipchatter.request 'get','room', {'max-results':100,'start-index':index}, (err,response) =>
+     hipchatter.request 'get','room', {'max-results':100,'start-index':index,'expand':'items.self','include-archived':true}, (err,response) =>
        if err isnt null
          callback "Error getting room list: #{err}"
        else
@@ -128,6 +189,27 @@ hipchatApi =
             callback?(null, roomlist)
           else
             @listRooms(msg,index + 100,roomlist) callback
+
+  printRoomList: (msg, like) ->
+    @listRooms(msg) (err,list) ->
+      if err isnt null
+        msg.reply util.inspect err
+      else
+        if like
+            fuzzynames = fuzzy.filter like, list, {caseSensitive: false; extract: (e) -> e.name}
+            minScore = 10 #for search strings longer than 3 chars, 10 points is a fairly confident match
+            minScore = 5 if like.length < 4 # shorter search strings can't generate as many points
+            warmfuzzy = _.filter fuzzynames, (e) -> e.score >= minScore          
+            filtered = _.map warmfuzzy, (e) -> e.original
+        else 
+            filtered = list
+        sorted = _.sortBy filtered, "name"
+        res = ["ga Name[ID]"]
+        _.map sorted, (room) -> res.push "#{if room.is_guest_accessible then 'g' else '-'}#{if room.is_archived then 'a' else '-'} #{room.name}   [#{room.id}]"
+        if res.length > 1
+            msg.send res.join("\n")
+        else
+            msg.send "Unable to get room list"
 
   updateLocalRoom: (msg, data) ->
     room = msg.robot.brain.data.hipchatrooms[data.id] || {}
@@ -140,7 +222,7 @@ hipchatApi =
         if err isnt null
           callback(err,null)
         else
-          @updateLocalRoom(msg,{id:r.id,name:r.name}) for r in roomlist when r.name.match(/^Cust:/i) and not r.name.match(/internal/i)
+          @updateLocalRoom(msg,{id:r.id, name:r.name, archived:r.is_archived, open:r.is_guest_accessible}) for r in roomlist when r.name.match(/^Cust:/i) and not r.name.match(/internal/i)
           callback(null,msg.robot.brain.data.hipchatrooms) 
 
   pairedRoom: (msg,orgid) ->
@@ -366,22 +448,42 @@ hipchatApi =
               errorlist.push([roomname,err])
             @findOpen(msg, roomlist, openlist, errorlist) callback
 
+#  listOpenRooms: (msg) ->
+#    @updateCustRooms(msg) (err,rooms) =>
+#      if err isnt null
+#        msg.reply "Error getting room list: #{err}"
+#      else 
+#        roomlist = (rooms[r].id for r of rooms)
+#        msg.send "Checking #{roomlist.length} rooms"
+#        @findOpen(msg, roomlist) (err, openlist) ->
+#          if err is null or err is []
+#            if openlist.length > 0
+#              msg.reply "Open rooms: #{openlist.join "\n"}"
+#            else
+#              msg.reply "No open rooms"
+#          else
+#            msg.reply "Error getting data for: #{err.join "\n"}"
+#            msg.reply "Open rooms: #{openlist.join "\n"}" if openlist?.length > 0
+
   listOpenRooms: (msg) ->
-    @updateCustRooms(msg) (err,rooms) =>
+    @updateCustRooms(msg) (err,rooms) ->
       if err isnt null
         msg.reply "Error getting room list: #{err}"
-      else 
-        roomlist = (rooms[r].id for r of rooms)
-        msg.send "Checking #{roomlist.length} rooms"
-        @findOpen(msg, roomlist) (err, openlist) ->
-          if err is null or err is []
-            if openlist.length > 0
-              msg.reply "Open rooms: #{openlist.join "\n"}"
-            else
-              msg.reply "No open rooms"
-          else
-            msg.reply "Error getting data for: #{err.join "\n"}"
-            msg.reply "Open rooms: #{openlist.join "\n"}" if openlist?.length > 0
+      else
+        openRooms = _.filter rooms, (r) -> r.open and !r.archived
+        names = _.map openRooms, (r) -> r.name
+        msg.reply names.join("\n")
+  
+  closeArchived: (msg) ->
+    @updateCustRooms(msg) (err, rooms) =>
+      if err isnt null
+        msg.reply "Error getting room list: #{err}"
+      else
+        openArchived = _.filter rooms, (r) => r.open and r.archived
+        _.each openArchived, (r) =>
+          @setGuest(msg, r.id, false) (err, resp) ->
+            msg.send err if err?
+            msg.send resp if resp?
 
   tagChat: (msg, roomid, ticketnum, access) ->
     (callback) ->
@@ -434,6 +536,28 @@ module.exports = (robot) ->
   robot.respond /(?:list |show |all )*(?:open|guest|accessible|public) rooms/i, (msg) ->
     hipchatApi.listOpenRooms msg
 
+  robot.respond /close archive[sd]? rooms/i, (msg) ->
+    hipchatApi.closeArchived msg
+
+  robot.respond /archive room (.*)/i, (msg) ->
+    msg.robot.logger.info "archive #{msg.match[1]}"
+    hipchatApi.archiveRoom msg, msg.match[1], true
+  
+  robot.respond /unarchive room (.*)/i, (msg) ->
+    msg.robot.logger.info "unarchive #{msg.match[1]}"
+    hipchatApi.archiveRoom msg, msg.match[1], false
+  
+  robot.respond /archive rooms (.*)/i, (msg) ->
+    _.each msg.match[1].split(","), (room) ->
+      msg.robot.logger.info "archive #{room}"
+      hipchatApi.archiveRoom msg, room, true
+  
+  robot.respond /unarchive rooms (.*)/i, (msg) ->
+    msg.robot.logger.info "unarchive #{msg.match[1]}"
+    _.each msg.match[1].split(","), (room) ->
+      msg.robot.logger.info "archive #{room}"
+      hipchatApi.archiveRoom msg, room, false
+
   robot.respond /(?:usurp|commandeer|take over|hijack|use) (?:hipchat|customer)*\s*room (.*) for ticket [#]?([0-9]*)\s*$/, (msg) ->
     hipchatApi.usurpRoom(msg, msg.match[1], msg.match[2]) (err,result) ->
       msg.reply err if err?
@@ -443,10 +567,13 @@ module.exports = (robot) ->
     msg.robot.zenDesk.getOrgNameFromTicket(msg, msg.match[1]) (Org) ->
       msg.reply Org
 
-  robot.respond /get list of rooms/i, (msg) ->
-    hipchatApi.updateCustRooms(msg) (err,list) ->
-      msg.reply util.inspect err if err isnt null
-      msg.reply util.inspect list
+  robot.respond /(get )*(list|show) (of |all ) rooms/i, (msg) ->
+    msg.robot.logger.info "show all rooms"
+    hipchatApi.printRoomList msg
+
+  robot.respond /(?:list|show) rooms like (.*)$/i, (msg) ->
+    msg.robot.logger.info "show like #{msg.match[1]}"
+    hipchatApi.printRoomList msg, msg.match[1]
 
   robot.respond /group test (.*)/i, (msg) ->
     eval "obj=#{msg.match[1]}"

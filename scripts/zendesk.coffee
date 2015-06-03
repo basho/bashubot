@@ -30,7 +30,7 @@ zenDesk =
                     'Accept': 'application/json',
                     'Content-Type': contentType
                   }
-      for k of customHeaders
+    for k of customHeaders
         headerObj[k] = customHeaders[k]
     HttpClient.create(@url, headers: headerObj)
 
