@@ -550,13 +550,12 @@ module.exports = (robot) ->
   robot.respond /archive rooms (.*)/i, (msg) ->
     _.each msg.match[1].split(","), (room) ->
       msg.robot.logger.info "archive #{room}"
-      hipchatApi.archiveRoom msg, room, true
+      hipchatApi.archiveRoom msg, room.trim(), true
   
   robot.respond /unarchive rooms (.*)/i, (msg) ->
-    msg.robot.logger.info "unarchive #{msg.match[1]}"
     _.each msg.match[1].split(","), (room) ->
-      msg.robot.logger.info "archive #{room}"
-      hipchatApi.archiveRoom msg, room, false
+      msg.robot.logger.info "unarchive #{room}"
+      hipchatApi.archiveRoom msg, room.trim(), false
 
   robot.respond /(?:usurp|commandeer|take over|hijack|use) (?:hipchat|customer)*\s*room (.*) for ticket [#]?([0-9]*)\s*$/, (msg) ->
     hipchatApi.usurpRoom(msg, msg.match[1], msg.match[2]) (err,result) ->
