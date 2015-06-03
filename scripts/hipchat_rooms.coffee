@@ -2,12 +2,11 @@
 #  hipchat_rooms - support creating, opening, closing, and capturing history from  rooms
 #
 # Commands:
-#  hubot attach|quote|chat log to ticket <ticket number>
 #  hubot find room for ticket <ticket number>
 #  hubot open room for ticket <ticket number>
 #  hubot close room for ticket <ticket number>
 #  hubot create room for ticket <ticket number>
-#  hubot attach chat log to ticket <ticket number>
+#  hubot attach|quote chat log to ticket <ticket number>
 #  hubot list open rooms
 #  hubot list all rooms
 #  hubot get list of rooms
