@@ -567,7 +567,7 @@ module.exports = (robot) ->
     msg.robot.zenDesk.getOrgNameFromTicket(msg, msg.match[1]) (Org) ->
       msg.reply Org
 
-  robot.respond /(get )*(list|show) (of |all ) rooms/i, (msg) ->
+  robot.respond /(get )*(list|show) (of |all )rooms/i, (msg) ->
     msg.robot.logger.info "show all rooms"
     hipchatApi.printRoomList msg
 
