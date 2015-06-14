@@ -1365,7 +1365,7 @@ module.exports = (robot) ->
     if idx != null
       onCall.schedule.cronRemoteSchedule msg, msg.match[2], idx
 
-  robot.respond /page (.*) message (.*)/i, (msg) ->
+  robot.respond /page \s*(.*)\s*message (.*)/i, (msg) ->
     onCall.page msg, msg.match[1].split(","), msg.match[2]
 
   robot.respond /page (.*)/i, (msg) ->
