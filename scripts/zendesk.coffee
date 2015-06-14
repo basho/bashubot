@@ -76,11 +76,15 @@ zenDesk =
     updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'"}}}'
     @put msg, "tickets/#{ticknum}.json", updateobject, "ticket"
 
-  uploadComment: (msg, ticknum, comment, customercansee, filename, contentType, data, callback) ->
+ uploadComment: (msg, ticknum, comment, customercansee, filename, contentType, data, callback) ->
     @upload(msg, filename, contentType, data) (body) =>
-      filetoken = body.upload.token
-      updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'","uploads":["'+filetoken+'"]}}}'
-      @put(msg, "tickets/#{ticknum}.json", updateobject, "ticket") (callback)
+      if body.upload
+        filetoken = body.upload.token
+        updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'","uploads":["'+filetoken+'"]}}}'
+        @put(msg, "tickets/#{ticknum}.json", updateobject, "ticket") (callback)
+      else
+        msg.robot.logger.info "upload(msg, #{filename}, #{contentType}, <#{data.length} bytes> failed: #{util.inspect body}"
+        msg.reply "upload failed"
 
   upload: (msg, filename, contentType, data) ->
     (fun) =>
