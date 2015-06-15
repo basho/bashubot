@@ -76,7 +76,7 @@ zenDesk =
     updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'"}}}'
     @put msg, "tickets/#{ticknum}.json", updateobject, "ticket"
 
- uploadComment: (msg, ticknum, comment, customercansee, filename, contentType, data, callback) ->
+  uploadComment: (msg, ticknum, comment, customercansee, filename, contentType, data, callback) ->
     @upload(msg, filename, contentType, data) (body) =>
       if body.upload
         filetoken = body.upload.token
