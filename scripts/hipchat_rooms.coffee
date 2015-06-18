@@ -67,7 +67,8 @@ hipchatApi =
         if err isnt null
           msg.reply err
         else
-          hipchatter.history room.id, (err, data) =>
+          hipchatter.request 'get', "room/#{room.id}/history/latest", {'max-results':1000}, (err, data) =>
+          #hipchatter.history room.id, (err, data) =>
             if err isnt null
               msg.reply err
             else
