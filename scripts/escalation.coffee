@@ -237,7 +237,9 @@ onCall =
                   msg.send "Failed to remove: #{diffs.join ', '}"
                 msg.send "Here's who's on-call: #{names.join ', '}"
 
-  page: (msg, people, text) ->
+  page: (msg, names, text) ->
+    folks = people.split(",") unless people instanceof Arry
+    people = _.map folks, (f) -> f.trim()
     message = "Page requested by #{msg.envelope.user.name}"
     message = " #{message} in room #{msg.envelope.room}" if msg.envelope.room?
     message = "#{message}: #{text}"
@@ -1365,8 +1367,8 @@ module.exports = (robot) ->
     if idx != null
       onCall.schedule.cronRemoteSchedule msg, msg.match[2], idx
 
-  robot.respond /page \s*(.*)\s*message (.*)/i, (msg) ->
-    onCall.page msg, msg.match[1].split(","), msg.match[2]
+  robot.respond /page \s*(.*)\s* message (.*)/i, (msg) ->
+    onCall.page msg, msg.match[1], msg.match[2]
 
   robot.respond /page (.*)/i, (msg) ->
     if not msg.match[1].match /.* message .*/
