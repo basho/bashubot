@@ -56,7 +56,9 @@ uploadUserMan =
     msg.robot.zenDesk.ticketData(msg, ticket) (ticketdata) ->
       org = ticketdata.organization_id
       msg.robot.zenDesk.getOrgName(msg,org) (orgname) ->
-        msg.robot.zenDesk.search(msg, {"query":"type:ticket organization:\"#{org}\" Bashobot+created+an+upload.basho.com+user Bashobot+changed+password+for+upload.basho.com+user"}) (data) ->
+        squery = "type:ticket organization:#{org} description:Bashobot+created+an+upload.basho.com+user description:Bashobot+changed+password+for+upload.basho.com+user"
+        msg.robot.logger.info "search query: \"#{squery}\""
+        msg.robot.zenDesk.search(msg, {"query":squery}) (data) ->
           if data.count == 0
               msg.reply "No upload users found for #{orgname} ticket #{ticketdata.id}"
           else
