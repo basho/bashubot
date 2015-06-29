@@ -41,7 +41,7 @@ uploadUserMan =
           try 
             re = new RegExp "#{name}:([^ ]*)(.*)\n"
             if m = "#{stdout}".match re
-              msg.reply "New user #{name} password #{m[1]}. #{m[2]}.\nPlease copy these details to https://sites.google.com/a/basho.com/handbook/services/client-services/projects/tools-cabal/customer-uploads"
+              msg.reply "New user #{name} password #{m[1]}. #{m[2]}.\nPlease copy these details to https://sites.google.com/a/basho.com/handbook/services/projects/customer-uploads"
               pnote = "Bashobot created an upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Create"
               pnote = "Bashobot changed password for upload.basho.com user '#{name}' with password '#{m[1]}'." if cmd == "Change"
               msg.robot.zenDesk.addComment(msg, ticket, pnote, false) (ticketdata) ->
@@ -56,7 +56,7 @@ uploadUserMan =
     msg.robot.zenDesk.ticketData(msg, ticket) (ticketdata) ->
       org = ticketdata.organization_id
       msg.robot.zenDesk.getOrgName(msg,org) (orgname) ->
-        msg.robot.zenDesk.search(msg, {"query":"type:ticket organization:#{org} Bashobot+created+an+upload.basho.com+user Bashobot+changed+password+for+upload.basho.com+user"}) (data) ->
+        msg.robot.zenDesk.search(msg, {"query":"type:ticket organization:\"#{org}\" Bashobot+created+an+upload.basho.com+user Bashobot+changed+password+for+upload.basho.com+user"}) (data) ->
           if data.count == 0
               msg.reply "No upload users found for #{orgname} ticket #{ticketdata.id}"
           else
