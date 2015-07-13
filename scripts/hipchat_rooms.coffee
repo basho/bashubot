@@ -222,7 +222,7 @@ hipchatApi =
         if err isnt null
           callback(err,null)
         else
-          @updateLocalRoom(msg,{id:r.id, name:r.name, archived:r.is_archived, open:r.is_guest_accessible}) for r in roomlist when r.name.match(/^Cust:/i) and not r.name.match(/internal/i)
+          @updateLocalRoom(msg,{id:r.id, name:r.name, archived:r.is_archived, open:r.is_guest_accessible}) for r in roomlist when r.name.match(/^Cust:/i)
           callback(null,msg.robot.brain.data.hipchatrooms) 
 
   pairedRoom: (msg,orgid) ->
