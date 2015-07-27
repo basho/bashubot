@@ -238,7 +238,7 @@ onCall =
                 msg.send "Here's who's on-call: #{names.join ', '}"
 
   page: (msg, names, text) ->
-    folks = people.split(",") unless people instanceof Arry
+    folks = names.split(",") unless people instanceof Array
     people = _.map folks, (f) -> f.trim()
     message = "Page requested by #{msg.envelope.user.name}"
     message = " #{message} in room #{msg.envelope.room}" if msg.envelope.room?
