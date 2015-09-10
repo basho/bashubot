@@ -82,10 +82,9 @@ hipchatApi =
                   d = new Date(parseInt(Date.parse(item.date)))
                   formattedDate = "#{d.getMonth() + 1}/#{d.getDate()}/#{d.getFullYear()} #{d.getHours()}:#{if d.getMinutes() < 10 then '0' else ''}#{d.getMinutes()}"
                   #filter out BashoBot and HipChat messages
-                  if item.file isnt undefined
-                    item.message = "File - #{item.file.name} - #{item.file.url}.  " + item.message
-                  if item.from.name? and (item.from.name isnt "Basho Bot")
-                    replyArray.push "[#{formattedDate}] #{item.from.name}: #{item.message}"
+                  item.message = "File - #{item.file.name} - #{item.file.url}.  " + item.message if item.file isnt undefined
+                  replyArray.push "[#{formattedDate}] #{item.from.name}: #{item.message}" if item.from.name? and (item.from.name isnt "Basho Bot")
+                  replyArray.push "[#{formattedDate}] #{item.from}: #{item.message}" if typeof item.from is "string"
               pnote = "#{replyArray.join("\n")}"
               msg.robot.zenDesk.uploadComment msg, ticketnum, "Adding chat transcript from recent HipChat conversation.", true, "ticket_#{ticketnum}_transcript.txt","text/plain", pnote, (retObj) ->
                 msg.reply("Updated ticket #{ticketnum}")
@@ -222,7 +221,7 @@ hipchatApi =
         if err isnt null
           callback(err,null)
         else
-          @updateLocalRoom(msg,{id:r.id, name:r.name, archived:r.is_archived, open:r.is_guest_accessible}) for r in roomlist when r.name.match(/^Cust:/i)
+          @updateLocalRoom(msg,{id:r.id, name:r.name, archived:r.is_archived, open:r.is_guest_accessible}) for r in roomlist when r.name.match(/^Cust:/i) and not r.name.match(/internal/i)
           callback(null,msg.robot.brain.data.hipchatrooms) 
 
   pairedRoom: (msg,orgid) ->
@@ -241,7 +240,7 @@ hipchatApi =
               else
                 callback("Error: #{err}",null)
             else
-              callback("Multiple matches",r)
+              callback("Multiple matches: #{util.inspect r}",r)
 
   makeRoomNameFromOrgId: (msg, orgid) ->
     (callback) =>
