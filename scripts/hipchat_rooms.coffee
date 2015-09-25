@@ -84,7 +84,7 @@ hipchatApi =
                   #filter out BashoBot and HipChat messages
                   item.message = "File - #{item.file.name} - #{item.file.url}.  " + item.message if item.file isnt undefined
                   replyArray.push "[#{formattedDate}] #{item.from.name}: #{item.message}" if item.from.name? and (item.from.name isnt "Basho Bot")
-                  replyArray.push "[#{formattedDate}] #{item.from}: #{item.message}" if typeof item.from is "string"
+                  replyArray.push "[#{formattedDate}] #{item.from}: #{item.message}" if (typeof item.from is "string") and (item.from isnt "Basho Bot")
               pnote = "#{replyArray.join("\n")}"
               msg.robot.zenDesk.uploadComment msg, ticketnum, "Adding chat transcript from recent HipChat conversation.", true, "ticket_#{ticketnum}_transcript.txt","text/plain", pnote, (retObj) ->
                 msg.reply("Updated ticket #{ticketnum}")
