@@ -96,7 +96,7 @@ hipchatApi =
       else
         @setGuest(msg,room.id,access) (err,resp) =>
           if err isnt null
-            msg.reply error
+            msg.reply err
           else
             @tagChat(msg,room.id,ticketnum,access) (err) =>
               if err is null
