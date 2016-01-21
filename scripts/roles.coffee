@@ -31,6 +31,7 @@ module.exports = (robot) ->
       users = robot.brain.usersForFuzzyName(name)
       if users.length is 1
         user = users[0]
+        name = user.name || name
         user.roles = user.roles or [ ]
         if user.roles.length > 0
           msg.send "#{name} is #{user.roles.join(", ")}."
