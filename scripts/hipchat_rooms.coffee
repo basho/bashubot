@@ -406,10 +406,6 @@ hipchatApi =
                 if err is null
                   hipchatter.room_exists roomname, (err,exists) ->
 
-                    msg.robot.logger.info "Room: --#{roomname}-- Err: --#{err}-- Exists: --#{exists}-- String: --Error: Room '#{roomname}' not found--"
-                    msg.robot.logger.info util.inspect err
-                    msg.robot.logger.info util.inspect "Error: Room '#{roomname}' not found"
-
                     # hipchatter expects "Room not found"
                     # HipChat API now returns "Room '<roomname>' not found"
                     # so until PR https://github.com/charltoons/hipchatter/pull/25 is accepted
