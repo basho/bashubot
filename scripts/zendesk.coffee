@@ -47,6 +47,8 @@ zenDesk =
             else
               data = bodydata
             fun(data)
+        else if res.statusCode is 204
+          fun() if fun
         else
           msg.reply "HTTP status #{res.statusCode} processing #{method} request: #{body}"
 
@@ -116,12 +118,49 @@ zenDesk =
        else
          msg.reply "Error searching for #{orgname}: #{util.inspect result}"
 
-
   getOrgNameFromTicket: (msg, ticketnum) ->
     (fun) =>
        @ticketData(msg, ticketnum) (ticketdata) =>
          org = ticketdata.organization_id
          @getOrgName(msg,org) fun
+
+  getOrgField: (msg, orgid, field) ->
+    @getOrgfields(msg, orgid, [field])
+
+  getOrgFields: (msg, orgid, fields) ->
+    #fields should be an array of strings
+    (fun) =>
+       @getOrganization(msg, orgid) (org) ->
+         result = {}
+         for f in fields
+            if org[f]
+                result[f] = org[f]
+            else if org.organization_fields[f]
+                result[f] = org.organization_fields[f]
+         fun(result) if fun
+
+  updateOrgFields: (msg, orgid, fields) ->
+    #fields should be a JSON object
+    (fun) =>
+      @getOrganization(msg, orgid) (org) =>
+        known_fields = ['id','url','external_id','name','created_at',
+                        'updated_at','domain_names','details','notes',
+                        'group_id','shared_tickets','shared_comments',
+                        'tags','organization_fields']
+        update = {}
+        count = 0
+        for f of fields
+            if f in known_fields
+                update[f] = fields[f]
+                count += 1
+            else
+                update["organization_fields"] = {} unless update["organization_fields"]
+                update["organization_fields"][f] = fields[f]
+                count += 1
+        if count > 0
+          @put(msg, "organizations/#{orgid}.json", JSON.stringify({"organization":update}), "organization") fun
+        else
+          fun() if fun
 
   search: (msg, queryobj) ->
     @query msg, "search.json", queryobj
