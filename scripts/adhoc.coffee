@@ -23,7 +23,7 @@
 # hubot get adhoc schedule - retrieve and display on call schedule modifications
 # hubot show current adhoc schedule - show currently active schedule modifications
 # hubot set my timezone to <timezone> - specify timezone to use when interacting with adhoc schedules
-# hubot list timezones <prefix> - list all timezones available for use with adhoc schedules that start with <prefix>
+# hubot list timezones like <prefix> - list all timezones available for use with adhoc schedules that start with <prefix>
 # hubot cover <name> (on-call|rolename) with <name> from <datetime> to <datetime> - create an adhoc schedule modification
 # hubot cover (on-call|rolename):<name> with <name> from <datetime> to <datetime> - create an adhoc schedule modification
 # hubot time - display current time in your selected timezone (adhoc schedule module)
@@ -428,11 +428,14 @@ module.exports = (robot) ->
     robot.respond /set my timezone (?:to)*\s*([^ ]*)/i, (msg) ->
         adhoc.setTimezone msg, msg.match[1]
 
-    robot.respond /list timezones*/i, (msg) ->
+    robot.respond /list timezones$/i, (msg) ->
         if msg.envelope.room
             msg.reply "Please repeat request in a private chat room"
         else
             adhoc.listTimezones(msg, '') 
+
+    robot.respond /list timezones(?: like)* (.*)/, (msg) ->
+        adhoc.listTimezones msg, msg.match[1]
 
     robot.respond /cover (.*) (on-?call|[^ ]*) with (.*) from (.*) to (.*)/i, (msg) ->
         adhoc.newEntry msg, msg.match[2], msg.match[1], msg.match[3], msg.match[4], msg.match[5]
