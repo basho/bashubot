@@ -535,7 +535,7 @@ module.exports = (robot) ->
       msg.reply err if err?
       msg.reply created if created?
 
-  robot.respond /(?:attach |quote |chat )*\s*log to ticket [#]?([0-9]*)\s*$/i, (msg) ->
+  robot.respond /(?:attach |quote |chat )*\s*log (?:for|in|to)*\s*ticket [#]?([0-9]*)\s*$/i, (msg) ->
     hipchatApi.printTranscript(msg, msg.match[1]) (err, generated) ->
       msg.reply err if err?
       msg.reply generated if generated?
