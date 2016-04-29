@@ -7,7 +7,8 @@
 #  lumberg - same as mug
 
 lumbergs = [
-  "http://www.mamapop.com/wp-content/uploads/2010/06/bill-lumbergh-office-space1.jpg",
+  "https://images-na.ssl-images-amazon.com/images/G/01/dvd/fox/officespace/Office3_L.jpg",
+  "http://cdn2-www.hoopsvibe.com/assets/uploads/2013/10/Bill+Lumbergh+Jerry+West+NBA.jpg",
   "http://static8.businessinsider.com/image/437a6c79736bca485dbe6e00/office-space-lumberg.jpg",
   "http://ambroselerma.files.wordpress.com/2011/06/bill-lumbergh.jpg"
   ]
