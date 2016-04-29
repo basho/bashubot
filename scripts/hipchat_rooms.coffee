@@ -535,7 +535,7 @@ module.exports = (robot) ->
       msg.reply err if err?
       msg.reply created if created?
 
-  robot.respond /(?:attach |quote |chat )*\s*log to ticket [#]?([0-9]*)\s*$/i, (msg) ->
+  robot.respond /(?:attach |quote |chat )*\s*log (?:for|in|to)*\s*ticket [#]?([0-9]*)\s*$/i, (msg) ->
     hipchatApi.printTranscript(msg, msg.match[1]) (err, generated) ->
       msg.reply err if err?
       msg.reply generated if generated?
@@ -564,12 +564,12 @@ module.exports = (robot) ->
       msg.robot.logger.info "unarchive #{room}"
       hipchatApi.archiveRoom msg, room.trim(), false
 
-  robot.respond /(?:usurp|commandeer|take over|hijack|use) (?:hipchat|customer)*\s*room (.*) for ticket [#]?([0-9]*)\s*$/, (msg) ->
+  robot.respond /(?:usurp|commandeer|take over|hijack|use) (?:hipchat|customer)*\s*room (.*) (?:for|in) ticket [#]?([0-9]*)\s*$/, (msg) ->
     hipchatApi.usurpRoom(msg, msg.match[1], msg.match[2]) (err,result) ->
       msg.reply err if err?
       msg.reply result if result?
 
-  robot.respond /get org for ticket #]? (.*)$/i, (msg) ->
+  robot.respond /get org (?:for|in|from) ticket #]? (.*)$/i, (msg) ->
     msg.robot.zenDesk.getOrgNameFromTicket(msg, msg.match[1]) (Org) ->
       msg.reply Org
 
