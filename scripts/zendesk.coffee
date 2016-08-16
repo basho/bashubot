@@ -121,8 +121,11 @@ zenDesk =
   getOrgNameFromTicket: (msg, ticketnum) ->
     (fun) =>
        @ticketData(msg, ticketnum) (ticketdata) =>
-         org = ticketdata.organization_id
-         @getOrgName(msg,org) fun
+         if ticket?.organization_id?
+           org = ticketdata.organization_id
+           @getOrgName(msg,org) fun
+        else
+           msg.reply "Error getting organization from ticket #{ticketnum}: #{ticketdata}"
 
   getOrgField: (msg, orgid, field) ->
     @getOrgfields(msg, orgid, [field])

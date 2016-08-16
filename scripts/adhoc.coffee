@@ -259,24 +259,30 @@ class Adhoc
     #     this should never happen
             msg.send("Did not find user #{msg.envelope.user.name}, default to UTC")
             return 'UTC'
-    
+   
+
     listTimezones: (msg, zone='', callback) =>
         @debugMsg msg, "listTimezones #{util.inspect msg.envelope.user}, #{util.inspect zone}", 2
+        zone_regex = zone.replace / /, '[ \/_]'
         verify = (err,zones) =>
           if err is null
             realZone = []
             for z in zones
-                realZone.push(z) if z.toLowerCase().match(zone.toLowerCase())
+                realZone.push(z) if z.toLowerCase().match(zone_regex)
             msg.reply "No timezone found matching #{zone}" if realZone.length is 0
             if realZone.length > 1
                 if realZone.length > 100 and msg.envelope.room
                     msg.reply "#{realZone.length} timezones match #{zone}"
                 else 
                     msg.reply "Multiple timezones found matching #{zone}:#{util.inspect realZone}" if realZone.length > 1
-            callback? msg, realZone[0], @ if realZone.length is 1
+            if realZone.length is 1
+                if callback
+                    callback msg, realZone[0], @ 
+                else
+                    msg.reply realZone[0]
           else
-            msg.send("Error getting list of time zones: #{err}")
-        time.listTimezones(verify)
+            msg.send "Error getting list of time zones: #{err}"
+        time.listTimezones verify 
    
     setTimezone: (msg, zone) =>
         @debugMsg msg, "setTimezone #{util.inspect msg.envelope.user}, #{util.inspect zone}", 1
@@ -420,10 +426,10 @@ module.exports = (robot) ->
        msg.reply "#{util.inspect obj}"
 
     robot.respond /(?:get|show) adhoc(?: schedule)*/i, (msg) ->
-        adhoc.getSchedule(msg)
+        adhoc.getSchedule msg
 
     robot.respond /(?:get|show) current adhoc(?: schedule)*/i, (msg) ->
-        adhoc.showCurrent(msg)
+        adhoc.showCurrent msg
 
     robot.respond /set my timezone (?:to)*\s*([^ ]*)/i, (msg) ->
         adhoc.setTimezone msg, msg.match[1]
@@ -432,7 +438,7 @@ module.exports = (robot) ->
         if msg.envelope.room
             msg.reply "Please repeat request in a private chat room"
         else
-            adhoc.listTimezones(msg, '') 
+            adhoc.listTimezones msg, '' 
 
     robot.respond /list timezones(?: like)* (.*)/, (msg) ->
         adhoc.listTimezones msg, msg.match[1]
@@ -455,7 +461,7 @@ module.exports = (robot) ->
         adhoc.setChatDebug enable
         msg.reply "adhoc chat debug now set to #{if adhoc.cdebug then "on" else "off"}"
 
-    robot.respond /time(?: in)*\s*(.*)/i, (msg) ->
+    robot.respond /time(?: in)* (.*)/i, (msg) ->
         if msg.match[1]
             adhoc.listTimezones msg, msg.match[1], (err, zone) ->
                 adhoc.debugMsg msg, util.inspect zone, 0
