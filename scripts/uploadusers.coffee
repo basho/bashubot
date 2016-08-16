@@ -71,25 +71,28 @@ uploadUserMan =
 
   findUser: (msg, ticket) ->
     msg.robot.zenDesk.ticketData(msg, ticket) (ticketdata) =>
-      org = ticketdata.organization_id
-      msg.robot.zenDesk.getOrgFields(msg, org,  ["upload_user","upload_password"]) (resultobj) =>
-        if resultobj? and resultobj.upload_user? and resultobj.upload_password?
-            msg.reply "Found user in organization data: User: #{resultobj.upload_user} Password: #{resultobj.upload_password}"
-            @userAction msg, "Validate", resultobj.upload_user, resultobj.upload_password, ticket
-        else
-          msg.reply "Searching ZenDesk, please be patient"
-          msg.robot.zenDesk.getOrgName(msg,org) (orgname) ->
-            squery = "type:ticket organization:#{org} description:Bashobot+created+an+upload.basho.com+user description:Bashobot+changed+password+for+upload.basho.com+user"
-            msg.robot.logger.info "search query: \"#{squery}\""
-            msg.robot.zenDesk.search(msg, {"query":squery}) (data) ->
-              if data.count == 0
-                  msg.reply "No upload users found for #{orgname} ticket #{ticketdata.id}"
-              else
-                tickets = []
-                for tick in data.results
-                  tickets.push("https://basho.zendesk.com/agent/#/tickets/#{tick.id}") if "id" of tick 
-                ticklist = tickets.join "\n"
-                msg.reply "#{orgname} upload users/passwords found in tickets:\n#{ticklist}"
+      if ticketdata
+        org = ticketdata.organization_id
+        msg.robot.zenDesk.getOrgFields(msg, org,  ["upload_user","upload_password"]) (resultobj) =>
+          if resultobj? and resultobj.upload_user? and resultobj.upload_password?
+              msg.reply "Found user in organization data: User: #{resultobj.upload_user} Password: #{resultobj.upload_password}"
+              @userAction msg, "Validate", resultobj.upload_user, resultobj.upload_password, ticket
+          else
+            msg.reply "Searching ZenDesk, please be patient"
+            msg.robot.zenDesk.getOrgName(msg,org) (orgname) ->
+              squery = "type:ticket organization:#{org} description:Bashobot+created+an+upload.basho.com+user description:Bashobot+changed+password+for+upload.basho.com+user"
+              msg.robot.logger.info "search query: \"#{squery}\""
+              msg.robot.zenDesk.search(msg, {"query":squery}) (data) ->
+                if data.count == 0
+                    msg.reply "No upload users found for #{orgname} ticket #{ticketdata.id}"
+                else
+                  tickets = []
+                  for tick in data.results
+                    tickets.push("https://basho.zendesk.com/agent/#/tickets/#{tick.id}") if "id" of tick 
+                  ticklist = tickets.join "\n"
+                  msg.reply "#{orgname} upload users/passwords found in tickets:\n#{ticklist}"
+      else
+        msg.reply "Ticket #{ticket} not found"
 
 module.exports = (robot) ->
   robot.um = uploadUserMan
