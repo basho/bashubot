@@ -1,13 +1,1 @@
-[
- "ascii.coffee",
- "redis-brain.coffee",
- "tweet.coffee", 
- "shipit.coffee",
- "bees.coffee",
- "pg-brain.coffee",
- "megusta.coffee",
- "ping.coffee",
- "achievement_unlocked.coffee",
- "remind.coffee",
- "meme_generator.coffee"
-]
+[]
