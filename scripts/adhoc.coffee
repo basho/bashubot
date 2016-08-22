@@ -263,7 +263,7 @@ class Adhoc
 
     listTimezones: (msg, zone='', callback) =>
         @debugMsg msg, "listTimezones #{util.inspect msg.envelope.user}, #{util.inspect zone}", 2
-        zone_regex = zone.replace / /, '[ \/_]'
+        zone_regex = zone.replace /[ ]/, '[ \/_]'
         verify = (err,zones) =>
           if err is null
             realZone = []
