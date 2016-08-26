@@ -56,7 +56,7 @@ phrases = [
   "Distributed systems are hard!"
   "Please run riak-debug and attach the output here."
   ":mug:"
-  "It was me! Nobody saw me! You can't prove anything!"
+  "It wasn't me! Nobody saw me! You can't prove anything!"
   "{error, disinterested}"
   "No way, Kemosabe!"
 ]
