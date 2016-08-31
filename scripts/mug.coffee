@@ -31,14 +31,17 @@ mug = (msg) ->
 bashomug = (msg) ->
   lumberg(msg, "*sips* *raises mug toward #{msg.message.user.name}*")
 
+
 lumberg = (msg, say) ->
-  unless msg.message.user.name.match /bashobot/i
+  nameregex = new RegExp msg.robot.name
+  unless msg.message.user.name.match nameregex
     msg.send msg.random lumbergs if Math.random() > 0.8
     msg.send say if say
 
 module.exports = (robot) ->
+
   robot.hear /(.*)/i, (msg) ->
-    msg.robot.logger.info "Received:#{msg.message.text}"
+    msg.robot.logger.info "Received #{msg.envelope.room}:#{msg.message.text}"
 
   robot.respond /mug(\s+me)?/i, mug
 

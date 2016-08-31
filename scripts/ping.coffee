@@ -58,7 +58,9 @@ phrases = [
   ":mug:"
   "It wasn't me! Nobody saw me! You can't prove anything!"
   "{error, disinterested}"
+  "CRASH REPORT Process <0.31689.3624> with 0 neighbours exited with reason: no match of right hand value {fucks_to_give, 0} in bashobot:handle_request/1 line 214 in context wakeup"
   "No way, Kemosabe!"
+  "Deal with it! :bashodealwithit:"
 ]
 
 module.exports = (robot) ->
