@@ -44,6 +44,10 @@ zenDesk =
           if fun
             if field
               data = bodydata[field]
+              if data is undefined
+                msg.reply "HTML response did not contain field #{field}"
+                msg.robot.logger "HTML response did not contain field #{field}"
+                msg.robot.logger util.inspect(body)
             else
               data = bodydata
             fun(data)
@@ -75,6 +79,7 @@ zenDesk =
     @get msg,"tickets/#{ticknum}.json","ticket"
 
   addComment: (msg, ticknum, comment, customercansee) ->
+    msg.robot.logger.info "Add comment to ticket #{ticknum} message #{comment} public #{customercansee}"
     updateobject = '{"ticket":{"status":"pending","comment":{"public":"'+customercansee+'","body":"'+comment+'"}}}'
     @put msg, "tickets/#{ticknum}.json", updateobject, "ticket"
 
