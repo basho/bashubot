@@ -6,6 +6,8 @@
 #  mug - same as hubot mug me
 #  lumberg - same as mug
 
+util = require 'util'
+
 lumbergs = [
   "https://images-na.ssl-images-amazon.com/images/G/01/dvd/fox/officespace/Office3_L.jpg",
   "http://cdn2-www.hoopsvibe.com/assets/uploads/2013/10/Bill+Lumbergh+Jerry+West+NBA.jpg",
@@ -39,9 +41,6 @@ lumberg = (msg, say) ->
     msg.send say if say
 
 module.exports = (robot) ->
-
-  robot.hear /(.*)/i, (msg) ->
-    msg.robot.logger.info "Received #{msg.envelope.room}:#{msg.message.text}"
 
   robot.respond /mug(\s+me)?/i, mug
 
