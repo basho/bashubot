@@ -153,11 +153,14 @@ OpsGenie =
     (items) ->
       msg.send("#{head}: #{items.join(", ")}")
 
-  displayOnCall: (msg) ->
+  displayOnCall: (msg, namesearch='') ->
     @getScheduleList(msg) (schedules) =>
       for s of schedules
-        msg.robot.logger.info("Checking on call for #{schedules[s]}(#{s})")
-        @getCurrentOnCall(msg, s) @displayList(msg, schedules[s])
+        if namesearch isnt ''
+          re = new RegExp namesearch, "i"
+        if !re or schedules[s]?.match? re
+          msg.robot.logger.info("Checking on call for #{schedules[s]}(#{s})")
+          @getCurrentOnCall(msg, s) @displayList(msg, schedules[s])
  
 module.exports = (robot) ->
 
@@ -169,9 +172,9 @@ module.exports = (robot) ->
     if not msg.match[1].match /.* message .*/
       msg.reply "please include a message - `page <name>[,<name>] message <text>`"
 
-  robot.respond /(?:who is|show me) on[- ]?call\??$/i, (msg) ->
+  robot.respond /(?:who is|show me) on[- ]?call\?? *(?:in|for|at)? *(.*)$/i, (msg) ->
       msg.robot.logger.info "Checking on-call."
-      OpsGenie.displayOnCall(msg)
+      OpsGenie.displayOnCall(msg,msg.match[1])
 
   robot.respond /ops test (.*)/i, (msg) ->
       eval "obj=#{msg.match[1]}"
