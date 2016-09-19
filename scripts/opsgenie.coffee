@@ -151,7 +151,7 @@ OpsGenie =
 
   displayList: (msg, head) ->
     (items) ->
-      msg.reply("#{head}: #{items.join(", ")}")
+      msg.send("#{head}: #{items.join(", ")}")
 
   displayOnCall: (msg) ->
     @getScheduleList(msg) (schedules) =>
