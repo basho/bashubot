@@ -12,6 +12,7 @@
 #
 #Commands:
 #  hubot page <fuzzyname> message <text> - send page, text limited to 130 characters
+#  hubot who is on-call
 #
 
 
@@ -82,14 +83,15 @@ OpsGenie =
         else
           msg.reply "HTTP status #{res.statusCode} processing #{method} request: #{body}"
 
-  getCurrentOncall: (msg, listId) ->
+  getCurrentOnCall: (msg, listId) ->
     (fun) =>
       @get(msg, "schedule/whoIsOnCall", { id: listId }) (response) ->
         names=[]
         if response?.participants?
           for o in response.participants
-             person =  msg.robot.brain.findUsersForFuzzyName(msg, o.name, "profile.real_name") || o.name
-             names.push(person)
+             person = msg.robot.brain.findUsersForFuzzyName(msg, o.name, "profile.real_name") 
+             person = [o.name] unless person.length is 1
+             names.push(person[0])
         fun(names)
 
   getScheduleList: (msg) ->
@@ -147,14 +149,30 @@ OpsGenie =
     if recipients.length > 0
         @sendPage msg, recipients, text.substring(0,129), text
 
+  displayList: (msg, head) ->
+    (items) ->
+      msg.reply("#{head}: #{items.join(", ")}")
+
+  displayOnCall: (msg) ->
+    @getScheduleList(msg) (schedules) =>
+      for s of schedules
+        msg.robot.logger.info("Checking on call for #{schedules[s]}(#{s})")
+        @getCurrentOnCall(msg, s) @displayList(msg, schedules[s])
+ 
 module.exports = (robot) ->
 
   robot.respond /page \s*(.*) \s*message \s*(.*)/i, (msg) ->
+    msg.robot.logger.info "Paging msg.match[1]"
     OpsGenie.doPage msg, msg.match[1], msg.match[2]
 
   robot.respond /page (.*)/i, (msg) ->
     if not msg.match[1].match /.* message .*/
       msg.reply "please include a message - `page <name>[,<name>] message <text>`"
+
+  robot.respond /(?:who is|show me) on[- ]?call\??$/i, (msg) ->
+      msg.robot.logger.info "Checking on-call."
+      OpsGenie.displayOnCall(msg)
+
   robot.respond /ops test (.*)/i, (msg) ->
       eval "obj=#{msg.match[1]}"
       msg.reply "#{util.inspect obj}"
