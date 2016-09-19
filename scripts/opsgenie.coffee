@@ -87,7 +87,7 @@ OpsGenie =
       @get(msg, "schedule/whoIsOnCall", { id: listId }) (response) ->
         names=[]
         if response?.participants?
-          for o in response.partitipants
+          for o in response.participants
              person =  msg.robot.brain.findUsersForFuzzyName(msg, o.name, "profile.real_name") || o.name
              names.push(person)
         fun(names)
