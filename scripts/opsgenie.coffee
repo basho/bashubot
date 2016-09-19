@@ -33,9 +33,14 @@ OpsGenie =
         headerObj[k] = customHeaders[k]
     HttpClient.create(@url, headers: headerObj)
 
-  get: (msg, api, field) ->
+  get: (msg, api, field, queryObject) ->
     (fun) =>
-      @httpClient().path(api).get() @process(msg, "GET", fun, field)
+      if field instanceof Object
+        queryObject = field
+        field = undefined
+      client = @httpClient().path(api).query('apiKey',@apiKey)
+      client.query(key,queryObject[key]) for key of queryObject 
+      client.get() @process(msg, "GET", fun, field)
 
   put: (msg, api, data, field) ->
     (fun) =>
@@ -58,8 +63,8 @@ OpsGenie =
       else
         if res.statusCode is 200 or 201
           bodydata = JSON.parse body
-          if bodydata.code isnt 200 and bodydata.ok isnt true
-            msg.reply "Server responded ok:#{bodydata.ok}"
+          if bodydata.ok? and  bodydata.ok isnt true
+            msg.reply "Server responded code:#{res.statusCode} ok:#{bodydata.ok}"
             msg.send util.inspect bodydata
           else
             if fun
@@ -77,7 +82,27 @@ OpsGenie =
         else
           msg.reply "HTTP status #{res.statusCode} processing #{method} request: #{body}"
 
+  getCurrentOncall: (msg, listId) ->
+    (fun) =>
+      @get(msg, "schedule/whoIsOnCall", { id: listId }) (response) ->
+        names=[]
+        if response?.participants?
+          for o in response.partitipants
+             person =  msg.robot.brain.findUsersForFuzzyName(msg, o.name, "profile.real_name") || o.name
+             names.push(person)
+        fun(names)
 
+  getScheduleList: (msg) ->
+    (fun) =>
+      @get(msg, "schedule") (response) ->
+        if response?.schedules?
+          schedules = []
+          for schedule in response.schedules
+            schedules[schedule.id] = schedule.name
+          fun(schedules)
+        else
+          msg.reply("Error getting schedule list from OpsGenie")
+        
 
   sendPage: (msg, ids, message, description = "", tags="OverwritesQuietHours") ->
     ids = ids.join "," if ids instanceof Array
@@ -130,3 +155,6 @@ module.exports = (robot) ->
   robot.respond /page (.*)/i, (msg) ->
     if not msg.match[1].match /.* message .*/
       msg.reply "please include a message - `page <name>[,<name>] message <text>`"
+  robot.respond /ops test (.*)/i, (msg) ->
+      eval "obj=#{msg.match[1]}"
+      msg.reply "#{util.inspect obj}"
