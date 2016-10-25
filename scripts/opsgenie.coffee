@@ -126,8 +126,8 @@ OpsGenie =
     if msg.envelope.room[0] is 'D'
       channel = "Private Chat"
     else
-      channel = msg.robot.brain.data.slack_channels[msg.envelope.room] 
-      msg.robot.brain.basho_slack.updateChannelList() unless channel
+      msg.robot.brain.basho_slack.updateChannelList() unless msg.robot.brain.data.slack_channels[msg.envelope.room]?
+      channel = msg.robot.brain.data.slack_channels[msg.envelope.room] ? "Unknown Channel '#{msg.envelope.room}'" 
 
     if message is null
       msg.reply "No message text found"
@@ -165,7 +165,7 @@ OpsGenie =
 module.exports = (robot) ->
 
   robot.respond /page \s*(.*) \s*message \s*(.*)/i, (msg) ->
-    msg.robot.logger.info "Paging msg.match[1]"
+    msg.robot.logger.info "Paging #{msg.match[1]}"
     OpsGenie.doPage msg, msg.match[1], msg.match[2]
 
   robot.respond /page (.*)/i, (msg) ->
