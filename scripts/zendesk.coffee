@@ -166,7 +166,7 @@ zenDesk =
                 update["organization_fields"][f] = fields[f]
                 count += 1
         if count > 0
-          msg.robot.logger.info "Updating org #{orgid} with #{util.inspect update}"
+          msg.robot.logger.info "Updating org #{orgid} with #{JSON.stringify update}"
           @put(msg, "organizations/#{orgid}.json", JSON.stringify({"organization":update}), "organization") fun
         else
           fun() if fun
