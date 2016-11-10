@@ -46,8 +46,8 @@ zenDesk =
               data = bodydata[field]
               if data is undefined
                 msg.reply "HTML response did not contain field #{field}"
-                msg.robot.logger "HTML response did not contain field #{field}"
-                msg.robot.logger util.inspect(body)
+                msg.robot.logger.info "HTML response did not contain field #{field}"
+                msg.robot.logger.info util.inspect(body)
             else
               data = bodydata
             fun(data)
