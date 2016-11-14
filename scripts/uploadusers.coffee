@@ -83,10 +83,14 @@ uploadUserMan =
         Accept:"*/*"
     msg.send "Request #{JSON.stringify request}" if @debug
     @do_request_with_redirect request, (err, res, body) =>
-      if res.statusCode is 200
-        reqfun?(JSON.parse(body))
+      if res?.statusCode?
+        if res.statusCode is 200
+          reqfun?(JSON.parse(body))
+        else
+          msg.reply "Error #{res.statusCode}\n#{body}"
       else
-        msg.reply "Error #{res.statusCode}\n#{body}"
+        msg.reply "Error: #{err}"
+        msg.send "body: #{util.inspect body}"
 
   addAuth: (req) ->
     docid = req.id
@@ -197,7 +201,7 @@ uploadUserMan =
         msg.robot.zenDesk.getOrgFields(msg, org,  ["upload_user","upload_password"]) (resultobj) =>
           if resultobj? and resultobj.upload_user? and resultobj.upload_password? and useorg
               msg.reply "Found user in organization data: User: #{resultobj.upload_user} Password: #{resultobj.upload_password}"
-              @userAction msg, "Validate", resultobj.upload_user, resultobj.upload_password, ticket, (success, name, password) ->
+              @userAction msg, "Validate", resultobj.upload_user, resultobj.upload_password, ticket, (success, name, password) =>
                 if success is false
                   @findUser msg, ticket, false
           else if usesheet
