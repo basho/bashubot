@@ -35,7 +35,7 @@ Slack =
         @robot.logger.error "Error listing users: #{err}"
         msg.reply "Error listing users: #{err}" if msg
 
-  updateChannelList: (msg) ->
+  updateChannelList: (msg, callback) ->
     @robot = msg.robot unless @robot
     msg.reply "Getting channel list" if msg
     @robot.adapter.client.web.channels.list {}, (err, data) =>
@@ -54,6 +54,7 @@ Slack =
         text = "Updated #{updated} channels"
         text +=", removed #{removed} archived channels" if removed > 0
         msg.reply text if msg
+        callback?(data) 
       else
         @robot.logger.error "Error listing channels: #{err}"
         msg.reply "Error listing channels: #{err}" if msg
