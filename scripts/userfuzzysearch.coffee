@@ -17,7 +17,11 @@ module.exports = (robot) ->
         name = msg
         msg = undefined
       
-      if robot.brain.data.users is {}
+      haveUsers = false
+      for own key,value of robot.brain.data.users
+        haveUsers = true
+        break  
+      if haveUsers is false
         robot.logger.info "Fetching user list: #{util.inspect robot.brain.basho_slack.updateUserList}"
         robot.logger.info util.inspect robot.brain.basho_slack.updateUserList(msg)
         return []
