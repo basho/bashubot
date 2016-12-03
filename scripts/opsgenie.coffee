@@ -126,7 +126,7 @@ OpsGenie =
     if msg.envelope.room[0] is 'D'
       channel = "Private Chat"
     else
-      msg.robot.brain.basho_slack.updateChannelList() unless msg.robot.brain.data.slack_channels[msg.envelope.room]?
+      msg.robot.brain.basho_slack.updateChannelList() unless msg.robot.brain.data.slack_channels?[msg.envelope.room]?
       channel = msg.robot.brain.data.slack_channels[msg.envelope.room] ? "Unknown Channel '#{msg.envelope.room}'" 
 
     if message is null
