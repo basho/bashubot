@@ -18,7 +18,8 @@ module.exports = (robot) ->
         msg = undefined
       
       if robot.brain.data.users is {}
-        robot.brain.basho_slack.updateUserList(msg)
+        robot.logger.info "Fetching user list: #{util.inspect robot.brain.basho_slack.updateUserList}"
+        robot.logger.info util.inspect robot.brain.basho_slack.updateUserList(msg)
         return []
 
       fieldlist = [ 
