@@ -19,7 +19,7 @@ util = require 'util'
 
 Slack = 
   robot: undefined
-  updateUserList: (msg) ->
+  updateUserList: (msg, callback) ->
     @robot = msg.robot unless @robot
     msg.reply "Getting user list" if msg
     @robot.adapter.client.web.users.list {}, (err, users) =>
@@ -31,9 +31,11 @@ Slack =
           for k of user
             @robot.brain.data.users[newuser.id][k] = user[k]
         msg.reply "Updated #{count} users" if msg
+        callback?(true)
       else
         @robot.logger.error "Error listing users: #{err}"
         msg.reply "Error listing users: #{err}" if msg
+        callback?(false)
 
   updateChannelList: (msg, callback) ->
     @robot = msg.robot unless @robot
@@ -58,6 +60,16 @@ Slack =
       else
         @robot.logger.error "Error listing channels: #{err}"
         msg.reply "Error listing channels: #{err}" if msg
+
+  ensureUsers: (msg, callback) ->
+    haveUsers = false
+    for own key,value of robot.brain.data.users
+      haveUsers = true
+      break
+    if haveUsers is false
+      robot.logger.info "Fetching user list: #{util.inspect robot.brain.basho_slack.updateUserList}"
+      robot.logger.info util.inspect robot.brain.basho_slack.updateUserList(msg)
+    callback?()
 
 
 module.exports = (robot) ->
